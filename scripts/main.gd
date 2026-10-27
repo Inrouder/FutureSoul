@@ -155,6 +155,8 @@ func _update_world() -> void:
     var state: Dictionary = match_game.state
     var showing: bool = state["phase"] in ["battle", "victory"]
     arena.visible = true
+    arena.mode = str(state.get("mode", "kidnap"))
+    arena.hacked = state.get("hacked", {"edge": [], "punk": []})
     for id in actors.keys():
         if not showing or not state["players"].has(id):
             var old: FutureActor = actors[id]
@@ -182,7 +184,7 @@ func _update_world() -> void:
             hostage.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
             arena.actor_node.add_child(hostage)
         hostage.position = arena.cell_center(state["hostage"])
-        hostage.visible = int(state["carrier"]) == 0
+        hostage.visible = state["mode"] == "kidnap" and int(state["carrier"]) == 0
         var event_text: String = str(state["event"])
         if event_text != previous_event:
             previous_event = event_text
@@ -193,11 +195,12 @@ func _update_world() -> void:
     arena.queue_redraw()
 
 func _play_event(event: Dictionary) -> void:
-    if event.get("type", "") != "fire": return
+    if not event.get("type", "") in ["fire", "portal", "hack"]: return
     var tracer := Line2D.new()
     tracer.width = 3.0
-    tracer.default_color = CYAN if event.get("hit", false) else MAGENTA
-    tracer.points = PackedVector2Array([arena.cell_center(event["from"]), arena.cell_center(event["to"])])
+    tracer.default_color = GOLD if event.get("type") == "hack" else (Color("af7dff") if event.get("type") == "portal" else (CYAN if event.get("hit", false) else MAGENTA))
+    var from_cell: Vector2i = event.get("from", event.get("to", Vector2i.ZERO))
+    tracer.points = PackedVector2Array([arena.cell_center(from_cell), arena.cell_center(event["to"])])
     tracer.antialiased = false
     arena.add_child(tracer)
     var tween := create_tween()
@@ -211,7 +214,7 @@ func _rebuild_ui() -> void:
         "menu", "connecting": _show_menu()
         "lobby": _show_lobby()
         "battle", "victory": _show_battle()
-    _label(interface_root, "BUILD 0.1.0  //  FUTURESOUL PROTOCOL", Vector2(40, 861), Vector2(620, 26), 12, MUTED)
+    _label(interface_root, "BUILD 0.2.0  //  FUTURESOUL PROTOCOL", Vector2(40, 861), Vector2(620, 26), 12, MUTED)
     _label(interface_root, status_text, Vector2(735, 861), Vector2(660, 26), 12, CYAN)
 
 func _sprite_role(profile: Dictionary) -> String:
@@ -262,7 +265,7 @@ func _show_menu() -> void:
     _button(p, "JOIN", Vector2(447, 545), Vector2(82, 54), func(): match_game.start_join(join_ip.text), GOLD)
     _label(p, "LAN: IP-Adresse des Hosts eingeben. Für Internet\nVPN oder UDP-Portweiterleitung erforderlich.", Vector2(41, 624), Vector2(491, 66), 14, MUTED)
     _label(p, "02 // OPERATIVE DESIGNER", Vector2(604, 159), Vector2(500, 29), 19, CYAN)
-    var preview := _panel(p, Vector2(934, 203), Vector2(164, 167), Color("0b1826"), MAGENTA)
+    var preview := _panel(p, Vector2(970, 203), Vector2(164, 167), Color("0b1826"), MAGENTA)
     var avatar := TextureRect.new()
     avatar.texture = load("res://assets/units/%s_%d.png" % [_sprite_role(match_game.my_profile), match_game.my_profile["color_id"]])
     avatar.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
@@ -425,24 +428,73 @@ func _leave_match() -> void:
 
 func _update_profile(key: String, value: Variant) -> void:
     match_game.my_profile[key] = value
-    match_game.request_profile_update()
-    if key == "name" and str(value) == "":
+    if key == "name" and str(value).strip_edges().is_empty():
         match_game.my_profile[key] = "GHOST"
+    if key in ["faction", "team"]:
+        if match_game.selected_mode == "kidnap":
+            if match_game.my_profile["team"] == "punk":
+                match_game.my_profile["faction"] = "maelstrom"
+            elif match_game.my_profile["faction"] == "maelstrom":
+                match_game.my_profile["faction"] = "edgerunner"
+        var ids: Array = GameRules.classes_for_faction(str(match_game.my_profile["faction"]))
+        if not ids.has(match_game.my_profile["class_id"]):
+            match_game.my_profile["class_id"] = ids[0]
+    if key in ["class_id", "faction", "team"]:
+        match_game.my_profile["weapon"] = GameRules.CLASSES[str(match_game.my_profile["class_id"])]["weapon"]
+    match_game.request_profile_update()
     _rebuild_ui()
 
 func _action_pressed(value: String) -> void:
     if value in ["interact", "overwatch"]:
         match_game.issue_action(value)
-    else:
-        action_mode = value
-        status_text = "TARGETING // %s - Klick auf ein Feld" % value.to_upper()
-        _rebuild_ui()
+        return
+    if value == "skill":
+        var mine: Dictionary = match_game.state["players"].get(match_game.local_id, {})
+        if mine.get("class_id", "") in ["e_psycho", "k_first", "k_rocky", "runner"]:
+            match_game.issue_action("skill")
+            return
+    action_mode = value
+    status_text = "TARGETING // %s - Select map tile" % value.to_upper()
+    _rebuild_ui()
 
 func _on_cell_clicked(cell: Vector2i) -> void:
     if match_game.state["phase"] != "battle": return
     if int(match_game.state["active"]) != match_game.local_id: return
-    if action_mode in ["move", "fire"]:
+    if action_mode == "hack":
+        _open_breach(cell)
+    elif action_mode in ["move", "fire", "skill", "portal"]:
         match_game.issue_action(action_mode, cell)
+
+func _open_breach(cell: Vector2i) -> void:
+    if match_game.state["mode"] != "hack": return
+    var me: Dictionary = match_game.state["players"].get(match_game.local_id, {})
+    if me.is_empty(): return
+    var opp := "punk" if me["team"] == "edge" else "edge"
+    var index: int = match_game.TERMINALS[opp].find(cell)
+    if index < 0:
+        status_text = "ACCESS DENIED // Select enemy terminal"
+        _rebuild_ui()
+        return
+    var progress: Array = match_game.state["hacked"][me["team"]]
+    if progress.has(index) or (index == 2 and (not progress.has(0) or not progress.has(1))):
+        status_text = "LOCKED // Collect both keys before mainframe"
+        _rebuild_ui()
+        return
+    var cost := 1 if me["class_id"] in ["e_runner", "k_raven"] else 2
+    if GameRules.range_between(me["pos"], cell) > 1 or int(me["ap"]) < cost:
+        status_text = "ACCESS DENIED // Reach terminal and reserve %d AP" % cost
+        _rebuild_ui()
+        return
+    var popup := CodeBreach.new()
+    popup.initialize(index, cell)
+    popup.completed.connect(func(proof: Array, target: Vector2i):
+        if is_instance_valid(popup): popup.queue_free()
+        match_game.issue_action("breach|" + JSON.stringify(proof), target)
+    )
+    popup.dismissed.connect(func():
+        if is_instance_valid(popup): popup.queue_free()
+    )
+    interface_root.add_child(popup)
 
 func _unhandled_key_input(event: InputEvent) -> void:
     if not event is InputEventKey or not event.pressed or event.echo: return
@@ -451,5 +503,7 @@ func _unhandled_key_input(event: InputEvent) -> void:
         match_game.issue_action("end")
     elif event.keycode == KEY_1: _action_pressed("move")
     elif event.keycode == KEY_2: _action_pressed("fire")
-    elif event.keycode == KEY_3: _action_pressed("interact")
+    elif event.keycode == KEY_3: _action_pressed("skill")
     elif event.keycode == KEY_4: _action_pressed("overwatch")
+    elif event.keycode == KEY_5: _action_pressed("hack" if match_game.state["mode"] == "hack" else "interact")
+    elif event.keycode == KEY_6: _action_pressed("portal")
