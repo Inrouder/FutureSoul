@@ -353,47 +353,67 @@ func _header(title: String, subtitle: String) -> void:
 
 func _show_battle() -> void:
     var state: Dictionary = match_game.state
-    _header("MAELSTROM KIDNAP  /  BLACKGRID", "EXTRACTION CONTRACT    //    TURN-BASED TACTICAL SHOOTER")
+    var mode := str(state["mode"])
+    _header(GameRules.MODES[mode] + "  /  BLACKGRID", "TURN-BASED PVP // CHOOSE YOUR MOVE // EXECUTE")
     var side := _panel(interface_root, Vector2(958, 112), Vector2(446, 608), PANEL, CYAN)
-    _label(side, "MISSION // 001", Vector2(18, 18), Vector2(410, 25), 16, GOLD)
-    _label(side, "GEISELRETTUNG", Vector2(18, 51), Vector2(400, 38), 26, WHITE)
-    _label(side, "EDGERUNNERS: Geisel holen, zur\ngrünen Zone bringen.\nMAELSTROM: 12 Runden abwehren.", Vector2(18, 96), Vector2(408, 89), 17, MUTED)
-    _label(side, "ROUND %02d / 12" % int(state["round"]), Vector2(18, 181), Vector2(360, 32), 21, GOLD)
+    _label(side, "OPERATION // %s" % mode.to_upper(), Vector2(18, 17), Vector2(407, 25), 15, GOLD)
+    _label(side, GameRules.MODES[mode], Vector2(18, 49), Vector2(417, 38), 25, WHITE)
+    var objective := ""
+    match mode:
+        "kidnap":
+            objective = "BLUE: Geisel befreien & evakuieren.\nRED: Rettung 12 Runden verhindern."
+        "skirmish":
+            objective = "Zwei Basen / zwei Squads. Eliminiere\ndie feindliche Einsatzgruppe."
+        "hack":
+            var mine_id: int = match_game.local_id
+            var side_key := "edge"
+            if state["players"].has(mine_id): side_key = state["players"][mine_id]["team"]
+            var hacked: Array = state["hacked"][side_key]
+            objective = "CODES %d/2  //  CORE %s\nFeindbasis: 2 Keys, dann Mainframe." % [mini(hacked.size(), 2), "OPEN" if hacked.has(2) else "LOCKED"]
+    _label(side, objective, Vector2(18, 91), Vector2(407, 64), 16, MUTED)
+    _label(side, "ROUND %02d / %02d" % [int(state["round"]), GameRules.MAX_ROUNDS], Vector2(18, 158), Vector2(360, 30), 20, GOLD)
     var active: int = int(state["active"])
     if state["players"].has(active):
         var current: Dictionary = state["players"][active]
         var tint := CYAN if current["team"] == "edge" else MAGENTA
-        _label(side, "ACTIVE // " + current["name"], Vector2(18, 221), Vector2(416, 30), 21, tint)
-        _label(side, "AP: %d  |  HP: %d  |  %s" % [int(current["ap"]), int(current["hp"]), str(current["weapon"]).to_upper()], Vector2(18, 256), Vector2(400, 27), 17, WHITE)
+        _label(side, "ACTIVE // " + current["name"], Vector2(18, 194), Vector2(411, 30), 19, tint)
+        _label(side, "AP %d  /  HP %d  /  %s" % [int(current["ap"]), int(current["hp"]), str(current["class_id"]).to_upper()], Vector2(18, 226), Vector2(410, 27), 15, WHITE)
     var mine: Dictionary = state["players"].get(match_game.local_id, {})
     if not mine.is_empty():
-        _label(side, "YOU // %s / HP %d" % [mine["name"], int(mine["hp"])], Vector2(18, 292), Vector2(410, 27), 17, CYAN if mine["team"] == "edge" else MAGENTA)
-    var your_turn: bool = state["phase"] == "battle" and active == match_game.local_id and not mine.is_empty() and mine["alive"]
-    _label(side, "ACTIONS // %s" % ["YOUR TURN" if your_turn else "WAITING"], Vector2(18, 333), Vector2(410, 28), 17, GOLD)
-    var buttons := [
-        ["1 / BEWEGEN", "move", CYAN], ["2 / SCHIESSEN", "fire", MAGENTA],
-        ["3 / GEISEL", "interact", GOLD], ["4 / OVERWATCH", "overwatch", CYAN],
+        _label(side, "YOUR CYBERWARE // " + str(GameRules.CLASSES[mine["class_id"]]["skill"]), Vector2(18, 262), Vector2(409, 28), 15, CYAN)
+    var your_turn := state["phase"] == "battle" and active == match_game.local_id and not mine.is_empty() and mine["alive"]
+    _label(side, "COMMANDS // %s" % ["YOUR TURN" if your_turn else "STANDBY"], Vector2(18, 298), Vector2(411, 26), 16, GOLD)
+    var buttons: Array = [
+        ["1 / MOVE", "move", CYAN], ["2 / FIRE", "fire", MAGENTA],
+        ["3 / CYBERWARE", "skill", GOLD], ["4 / OVERWATCH", "overwatch", CYAN],
     ]
+    if mode == "kidnap":
+        buttons.append(["5 / HOSTAGE", "interact", GOLD])
+    elif mode == "hack":
+        buttons.append(["5 / BREACH CODE", "hack", GOLD])
+    if mine.get("class_id", "") == "k_raven":
+        buttons.append(["6 / WALL PORTAL", "portal", Color("a894ff")])
     for i in range(buttons.size()):
         var item: Array = buttons[i]
         var px := 18 + (i % 2) * 211
-        var py := 373 + (i / 2) * 57
-        var b := _button(side, item[0], Vector2(px, py), Vector2(199, 46), func(): _action_pressed(item[1]), item[2], item[1] == action_mode)
-        b.disabled = not your_turn
-    var end_btn := _button(side, "ZUG BEENDEN  [SPACE]", Vector2(18, 495), Vector2(411, 46), func(): match_game.issue_action("end"), GOLD)
+        var py := 331 + int(i / 2) * 54
+        var button := _button(side, str(item[0]), Vector2(px, py), Vector2(199, 44), func(): _action_pressed(str(item[1])), item[2], item[1] == action_mode)
+        button.disabled = not your_turn
+    var end_btn := _button(side, "END TURN  [SPACE]", Vector2(18, 506), Vector2(411, 46), func(): match_game.issue_action("end"), GOLD)
     end_btn.disabled = not your_turn
-    _label(side, "LINK: %s  |  UNIT #%d" % ["ONLINE" if match_game.multiplayer.multiplayer_peer is ENetMultiplayerPeer else "OFFLINE", match_game.local_id], Vector2(20, 560), Vector2(410, 29), 13, MUTED)
+    _label(side, "LINK: %s / PEER %d" % ["ONLINE" if match_game.multiplayer.multiplayer_peer is ENetMultiplayerPeer else "LOCAL", match_game.local_id], Vector2(20, 564), Vector2(411, 27), 13, MUTED)
     var bottom := _panel(interface_root, Vector2(38, 737), Vector2(1366, 98), PANEL, GOLD)
-    _label(bottom, "FIELD LOG //", Vector2(18, 13), Vector2(225, 25), 14, GOLD)
+    _label(bottom, "FIELD LOG //", Vector2(18, 13), Vector2(220, 25), 14, GOLD)
     var lines: Array = state["log"]
-    _label(bottom, str(lines[0]) if not lines.is_empty() else "--", Vector2(18, 43), Vector2(790, 34), 19, WHITE)
-    _label(bottom, "[LINKSKLICK] ZIELFELD    [1-4] AKTION    [SPACE] ZUG BEENDEN", Vector2(807, 44), Vector2(540, 34), 13, MUTED)
+    _label(bottom, str(lines[0]) if not lines.is_empty() else "--", Vector2(18, 42), Vector2(790, 33), 18, WHITE)
+    _label(bottom, "CLICK: TARGET  /  [1-6] ACTION  /  [SPACE] END TURN", Vector2(790, 44), Vector2(553, 30), 13, MUTED)
     if state["phase"] == "victory":
-        var tint := CYAN if state["winner"] == "edge" else MAGENTA
+        var winner: String = str(state["winner"])
+        var tint := GOLD if winner == "draw" else (CYAN if winner == "edge" else MAGENTA)
         var over := _panel(interface_root, Vector2(300, 240), Vector2(795, 341), Color("0d1424"), tint)
         _label(over, "CONTRACT CLOSED", Vector2(38, 38), Vector2(736, 43), 32, tint)
-        _label(over, "EDGERUNNERS WIN" if state["winner"] == "edge" else "MAELSTROM WIN", Vector2(38, 114), Vector2(733, 54), 36, WHITE)
-        _label(over, "Alle Operatoren wurden über das Match-Ergebnis informiert.", Vector2(39, 183), Vector2(717, 36), 17, MUTED)
+        _label(over, "DRAW // STALEMATE" if winner == "draw" else ("BLUE SQUAD VICTORY" if winner == "edge" else "RED SQUAD VICTORY"), Vector2(38, 114), Vector2(733, 54), 35, WHITE)
+        _label(over, "Alle Operatoren haben das finale Ergebnis erhalten.", Vector2(39, 183), Vector2(717, 36), 17, MUTED)
         _button(over, "ZURÜCK ZUM HAUPTMENÜ", Vector2(40, 250), Vector2(715, 57), func(): _leave_match(), tint, true)
 
 func _leave_match() -> void:
