@@ -18,6 +18,7 @@ const FACTIONS := {
 }
 const WEAPONS := {
     "pistol": {"label": "NEON-9", "damage": 32, "range": 8, "accuracy": 87},
+    "silenced": {"label": "GHOST-9 SILENCED", "damage": 27, "range": 8, "accuracy": 95},
     "rifle": {"label": "MANTIS AR", "damage": 42, "range": 11, "accuracy": 79},
     "smg": {"label": "STATIC SMG", "damage": 30, "range": 7, "accuracy": 90},
     "hmg": {"label": "IRONSTORM HMG", "damage": 52, "range": 9, "accuracy": 70},
@@ -47,6 +48,24 @@ const CLASSES := {
     "netrunner": {"label": "NETRUNNER (LEGACY)", "faction": "edgerunner", "movement": 4, "health": 90, "weapon": "pistol", "skill": "WEAPON JAM"},
     "heavy": {"label": "ENFORCER (LEGACY)", "faction": "maelstrom", "movement": 3, "health": 130, "weapon": "hmg", "skill": "SUPPRESSION"},
 }
+const EQUIPMENT := {
+    "m_gunner": ["hmg", "smg"],
+    "m_brawler": ["smart", "mantis"],
+    "m_shooty": ["punkgun", "smg"],
+    "e_big": ["bigiron", "pistol"],
+    "e_sniper": ["sniper", "silenced"],
+    "e_psycho": ["mantis", "pistol"],
+    "e_runner": ["wire", "silenced"],
+    "k_first": ["katana", "silenced"],
+    "k_rocky": ["bat", "smart"],
+    "k_raven": ["arc", "silenced"],
+    "runner": ["rifle", "pistol"],
+    "netrunner": ["pistol", "wire"],
+    "heavy": ["hmg", "smg"],
+}
+static func equipment_for_class(class_id: String) -> Array:
+    return EQUIPMENT.get(class_id, ["rifle"])
+
 static func classes_for_faction(faction: String) -> Array:
     var values: Array = []
     for id in CLASSES:
