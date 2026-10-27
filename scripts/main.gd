@@ -214,27 +214,84 @@ func _rebuild_ui() -> void:
     _label(interface_root, "BUILD 0.1.0  //  FUTURESOUL PROTOCOL", Vector2(40, 861), Vector2(620, 26), 12, MUTED)
     _label(interface_root, status_text, Vector2(735, 861), Vector2(660, 26), 12, CYAN)
 
+func _sprite_role(profile: Dictionary) -> String:
+    var role := str(profile.get("class_id", "e_runner"))
+    if profile.get("faction", "") == "maelstrom": return "punk"
+    if role in ["m_gunner", "e_big", "k_rocky", "heavy"]: return "heavy"
+    if role in ["e_runner", "k_raven", "netrunner"]: return "netrunner"
+    return "runner"
+
+func _choose_mode(value: String) -> void:
+    match_game.selected_mode = GameRules.valid_mode(value)
+    if value == "kidnap" and match_game.my_profile["faction"] == "maelstrom":
+        match_game.my_profile["faction"] = "edgerunner"
+        match_game.my_profile["class_id"] = "e_runner"
+        match_game.my_profile["weapon"] = "wire"
+    _rebuild_ui()
+
 func _show_menu() -> void:
     var shade := ColorRect.new()
-    shade.color = Color("070e19", 0.80)
+    shade.color = Color("060a14", 0.88)
     shade.size = Vector2(WIDTH, HEIGHT)
     shade.mouse_filter = Control.MOUSE_FILTER_STOP
     interface_root.add_child(shade)
-    var p := _panel(interface_root, Vector2(265, 102), Vector2(910, 720), PANEL, CYAN)
-    _label(p, "F U T U R E  /  S O U L", Vector2(50, 37), Vector2(810, 65), 47, CYAN)
-    _label(p, "TACTICAL CYBERPUNK   //   TOP-DOWN PvP", Vector2(53, 112), Vector2(810, 30), 19, GOLD)
-    _label(p, "01 / MAELSTROM KIDNAP", Vector2(52, 172), Vector2(780, 33), 26, WHITE)
-    _label(p, "Eine Geisel. Zwei Fraktionen. Zwölf Runden.\nInfiltriere die Punk-Basis, sichere den NPC und bring ihn\nzur grün markierten Evakuierungszone. Oder verhindere es.", Vector2(53, 217), Vector2(795, 105), 19, MUTED)
-    _label(p, "SOFORT SPIELEN", Vector2(53, 337), Vector2(400, 24), 14, CYAN)
-    _button(p, "SOLO-TRAINING  /  VS BOTS", Vector2(52, 374), Vector2(805, 57), func():
-        match_game.start_training(), CYAN, true)
-    _label(p, "MULTIPLAYER  /  UDP 7777", Vector2(53, 457), Vector2(700, 26), 14, GOLD)
-    _button(p, "HOST ERSTELLEN", Vector2(52, 492), Vector2(385, 57), func(): match_game.start_host(), CYAN)
-    join_ip = _text_input(p, "127.0.0.1", Vector2(455, 495), Vector2(227, 49))
-    _button(p, "BEITRETEN", Vector2(691, 492), Vector2(166, 57), func(): match_game.start_join(join_ip.text), GOLD)
-    _label(p, "Host und Mitspieler müssen dieselbe Godot-Version verwenden.\nLAN: lokale IP des Hosts. Internet: UDP-Port 7777 freigeben / weiterleiten.", Vector2(55, 578), Vector2(790, 65), 15, MUTED)
+    var p := _panel(interface_root, Vector2(145, 76), Vector2(1150, 746), PANEL, CYAN)
+    _label(p, "F U T U R E  /  S O U L", Vector2(37, 26), Vector2(1080, 70), 45, CYAN)
+    _label(p, "TACTICAL CYBERPUNK // TURN-BASED PVP // BLACKGRID NETWORK", Vector2(40, 101), Vector2(1030, 30), 17, GOLD)
+    var vertical := ColorRect.new()
+    vertical.color = Color("365367")
+    vertical.position = Vector2(570, 161)
+    vertical.size = Vector2(2, 539)
+    p.add_child(vertical)
+    _label(p, "01 // OPERATION", Vector2(39, 159), Vector2(490, 29), 19, CYAN)
+    _dropdown(p, ["01  MAELSTROM KIDNAP", "02  BASE VS BASE", "03  HACK THE BASE"], ["kidnap", "skirmish", "hack"], match_game.selected_mode, Vector2(39, 199), func(v): _choose_mode(str(v)))
+    var mission_text := ""
+    match match_game.selected_mode:
+        "kidnap":
+            mission_text = "Geiselbefreiung: Edgerunner oder Dragon Clan\ngegen Maelstrom-Verteidiger. Schütze den NPC\nund erreiche die leuchtende Extraktionszone."
+        "skirmish":
+            mission_text = "Zwei Stützpunkte, zwei Squads. Taktische\nDeckung, Spezialfähigkeiten und wechselnde\nZüge. Schalte die gegnerische Fraktion aus."
+        "hack":
+            mission_text = "Infiltriere die feindliche Basis. Extrahiere\nzwei verschlüsselte Zugangscodes und knacke\nanschließend den zentralen Hauptrechner."
+    _label(p, mission_text, Vector2(40, 263), Vector2(500, 116), 18, WHITE)
+    _label(p, "QUICK START  /  CPU OPPONENTS", Vector2(40, 396), Vector2(500, 29), 15, GOLD)
+    _button(p, "SOLO-TRAINING STARTEN", Vector2(39, 432), Vector2(490, 58), func(): match_game.start_training(), CYAN, true)
+    _label(p, "LAN MULTIPLAYER   //   UDP 7777", Vector2(40, 510), Vector2(485, 29), 15, GOLD)
+    _button(p, "HOST ERSTELLEN", Vector2(39, 545), Vector2(218, 54), func(): match_game.start_host(), CYAN)
+    join_ip = _input(p, "127.0.0.1", Vector2(271, 548), Vector2(168, 48))
+    _button(p, "JOIN", Vector2(447, 545), Vector2(82, 54), func(): match_game.start_join(join_ip.text), GOLD)
+    _label(p, "LAN: IP-Adresse des Hosts eingeben. Für Internet\nVPN oder UDP-Portweiterleitung erforderlich.", Vector2(41, 624), Vector2(491, 66), 14, MUTED)
+    _label(p, "02 // OPERATIVE DESIGNER", Vector2(604, 159), Vector2(500, 29), 19, CYAN)
+    var preview := _panel(p, Vector2(934, 203), Vector2(164, 167), Color("0b1826"), MAGENTA)
+    var avatar := TextureRect.new()
+    avatar.texture = load("res://assets/units/%s_%d.png" % [_sprite_role(match_game.my_profile), match_game.my_profile["color_id"]])
+    avatar.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+    avatar.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+    avatar.position = Vector2(28, 20)
+    avatar.size = Vector2(112, 126)
+    preview.add_child(avatar)
+    _label(p, "CODENAME", Vector2(604, 204), Vector2(300, 26), 14, MUTED)
+    var nick := _input(p, str(match_game.my_profile["name"]), Vector2(604, 236), Vector2(290, 44))
+    nick.text_submitted.connect(func(v: String): _update_profile("name", v))
+    nick.focus_exited.connect(func(): _update_profile("name", nick.text))
+    _label(p, "FRAKTION", Vector2(604, 296), Vector2(312, 24), 14, MUTED)
+    var factions: Array = ["edgerunner", "kobantec"] if match_game.selected_mode == "kidnap" else ["maelstrom", "edgerunner", "kobantec"]
+    var faction_names: Array = []
+    for faction in factions: faction_names.append(GameRules.FACTIONS[faction])
+    _dropdown(p, faction_names, factions, match_game.my_profile["faction"], Vector2(604, 326), func(v): _update_profile("faction", v))
+    _label(p, "SPEZIALKLASSE", Vector2(604, 391), Vector2(322, 25), 14, MUTED)
+    var class_keys: Array = GameRules.classes_for_faction(str(match_game.my_profile["faction"]))
+    var class_names: Array = []
+    for k in class_keys: class_names.append(GameRules.CLASSES[k]["label"])
+    _dropdown(p, class_names, class_keys, match_game.my_profile["class_id"], Vector2(604, 420), func(v): _update_profile("class_id", v))
+    _label(p, "ARMOR TINT", Vector2(604, 484), Vector2(300, 23), 14, MUTED)
+    _dropdown(p, ["NEON CYAN", "ULTRA VIOLET", "SUNSET GOLD", "MALWARE RED"], [0, 1, 2, 3], match_game.my_profile["color_id"], Vector2(604, 514), func(v): _update_profile("color_id", v))
+    var loadout: Dictionary = GameRules.CLASSES[match_game.my_profile["class_id"]]
+    _label(p, "LOADOUT // " + str(GameRules.WEAPONS[loadout["weapon"]]["label"]), Vector2(604, 584), Vector2(514, 28), 17, GOLD)
+    _label(p, "CYBERWARE // " + str(loadout["skill"]), Vector2(604, 615), Vector2(514, 28), 16, CYAN)
+    _label(p, "KLASSENWAFFEN SIND BALANCIERT FEST ZUGEWIESEN.\nINDIVIDUELLE OUTFITS UND AUSRÜSTUNGSSLOTS FOLGEN.", Vector2(604, 660), Vector2(514, 56), 13, MUTED)
     if match_game.state["phase"] == "connecting":
-        _label(p, "VERBINDE MIT SERVER ...", Vector2(52, 655), Vector2(760, 34), 21, GOLD)
+        _label(p, "VERBINDUNG WIRD AUFGEBAUT ...", Vector2(42, 702), Vector2(530, 30), 16, GOLD)
 
 func _show_lobby() -> void:
     _header("LOBBY // OPERATOR CONFIGURATION", "MAELSTROM KIDNAP  /  WAITING FOR SQUADS")
