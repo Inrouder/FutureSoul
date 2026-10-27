@@ -6,16 +6,59 @@ const WIDTH := 28
 const HEIGHT := 19
 const MAX_ROUNDS := 12
 const AP_PER_TURN := 3
+const MODES := {
+    "kidnap": "MAELSTROM KIDNAP",
+    "skirmish": "BASE VS BASE",
+    "hack": "HACK THE BASE",
+}
+const FACTIONS := {
+    "maelstrom": "MAELSTROM PUNKS",
+    "edgerunner": "EDGERUNNERS",
+    "kobantec": "KOBANTEC / DRAGON CLAN",
+}
 const WEAPONS := {
-    "pistol": {"label": "NEON-9", "damage": 34, "range": 8, "accuracy": 88},
-    "rifle": {"label": "MANTIS AR", "damage": 43, "range": 11, "accuracy": 78},
-    "smg": {"label": "STATIC SMG", "damage": 29, "range": 7, "accuracy": 94},
+    "pistol": {"label": "NEON-9", "damage": 32, "range": 8, "accuracy": 87},
+    "rifle": {"label": "MANTIS AR", "damage": 42, "range": 11, "accuracy": 79},
+    "smg": {"label": "STATIC SMG", "damage": 30, "range": 7, "accuracy": 90},
+    "hmg": {"label": "IRONSTORM HMG", "damage": 52, "range": 9, "accuracy": 70},
+    "smart": {"label": "SMARTSIDE", "damage": 34, "range": 7, "accuracy": 94},
+    "punkgun": {"label": "SAWED-OFF", "damage": 55, "range": 4, "accuracy": 84},
+    "bigiron": {"label": "BIG IRON .80", "damage": 64, "range": 7, "accuracy": 78},
+    "sniper": {"label": "GHOST RAIL", "damage": 62, "range": 16, "accuracy": 85},
+    "mantis": {"label": "MANTIS BLADES", "damage": 51, "range": 2, "accuracy": 98},
+    "wire": {"label": "MONOWIRE", "damage": 35, "range": 5, "accuracy": 96},
+    "katana": {"label": "LASER KATANA", "damage": 58, "range": 2, "accuracy": 97},
+    "bat": {"label": "SHOCK BAT", "damage": 44, "range": 2, "accuracy": 94},
+    "arc": {"label": "ARC LINK", "damage": 38, "range": 7, "accuracy": 93},
 }
 const CLASSES := {
-    "runner": {"label": "STREET RUNNER", "movement": 5, "health": 95},
-    "netrunner": {"label": "NETRUNNER", "movement": 4, "health": 90},
-    "heavy": {"label": "ENFORCER", "movement": 3, "health": 130},
+    "m_gunner": {"label": "GUNNER", "faction": "maelstrom", "movement": 3, "health": 150, "weapon": "hmg", "skill": "SUPPRESSION"},
+    "m_brawler": {"label": "PUNK SCHLAEGER", "faction": "maelstrom", "movement": 5, "health": 115, "weapon": "smart", "skill": "BERSERK STRIKE"},
+    "m_shooty": {"label": "SHOOTY", "faction": "maelstrom", "movement": 4, "health": 105, "weapon": "punkgun", "skill": "DOUBLE TAP"},
+    "e_big": {"label": "THE BIG", "faction": "edgerunner", "movement": 4, "health": 130, "weapon": "bigiron", "skill": "POWER SHOT"},
+    "e_sniper": {"label": "THE SNIPEOUT", "faction": "edgerunner", "movement": 4, "health": 85, "weapon": "sniper", "skill": "WALL PENETRATION"},
+    "e_psycho": {"label": "CYBERPSYCHO", "faction": "edgerunner", "movement": 6, "health": 115, "weapon": "mantis", "skill": "OVERDRIVE"},
+    "e_runner": {"label": "NETRUNNER", "faction": "edgerunner", "movement": 5, "health": 88, "weapon": "wire", "skill": "WEAPON JAM"},
+    "k_first": {"label": "FIRST WARRIOR", "faction": "kobantec", "movement": 5, "health": 108, "weapon": "katana", "skill": "GHOST CLOAK"},
+    "k_rocky": {"label": "THE ROCKY", "faction": "kobantec", "movement": 4, "health": 180, "weapon": "bat", "skill": "SHIELD BASH"},
+    "k_raven": {"label": "RAVEN", "faction": "kobantec", "movement": 5, "health": 95, "weapon": "arc", "skill": "CHAIN LIGHTNING"},
+    # Compatibility with prototype profiles.
+    "runner": {"label": "STREET RUNNER", "faction": "edgerunner", "movement": 5, "health": 95, "weapon": "rifle", "skill": "DASH"},
+    "netrunner": {"label": "NETRUNNER (LEGACY)", "faction": "edgerunner", "movement": 4, "health": 90, "weapon": "pistol", "skill": "WEAPON JAM"},
+    "heavy": {"label": "ENFORCER (LEGACY)", "faction": "maelstrom", "movement": 3, "health": 130, "weapon": "hmg", "skill": "SUPPRESSION"},
 }
+static func classes_for_faction(faction: String) -> Array:
+    var values: Array = []
+    for id in CLASSES:
+        if str(CLASSES[id].get("faction", "")) == faction and not id in ["runner", "netrunner", "heavy"]:
+            values.append(id)
+    return values
+
+static func valid_faction(value: String) -> String:
+    return value if FACTIONS.has(value) else "edgerunner"
+
+static func valid_mode(value: String) -> String:
+    return value if MODES.has(value) else "kidnap"
 
 static func in_bounds(c: Vector2i) -> bool:
     return c.x >= 0 and c.y >= 0 and c.x < WIDTH and c.y < HEIGHT
