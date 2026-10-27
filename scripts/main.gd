@@ -294,43 +294,55 @@ func _show_menu() -> void:
         _label(p, "VERBINDUNG WIRD AUFGEBAUT ...", Vector2(42, 702), Vector2(530, 30), 16, GOLD)
 
 func _show_lobby() -> void:
-    _header("LOBBY // OPERATOR CONFIGURATION", "MAELSTROM KIDNAP  /  WAITING FOR SQUADS")
+    var mode := str(match_game.state["mode"])
+    _header("LOBBY // OPERATIVE CONFIGURATION", GameRules.MODES[mode] + "  /  AWAITING SQUADS")
     var p := _panel(interface_root, Vector2(38, 112), Vector2(553, 707), PANEL)
-    _label(p, "01 // CHARAKTER-EDITOR", Vector2(23, 20), Vector2(505, 42), 24, CYAN)
+    _label(p, "01 // CHARACTER DESIGNER", Vector2(23, 20), Vector2(505, 42), 23, CYAN)
     var avatar := TextureRect.new()
-    avatar.texture = load("res://assets/units/%s_%d.png" % ["punk" if match_game.my_profile["team"] == "punk" else match_game.my_profile["class_id"], match_game.my_profile["color_id"]])
+    avatar.texture = load("res://assets/units/%s_%d.png" % [_sprite_role(match_game.my_profile), match_game.my_profile["color_id"]])
     avatar.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
     avatar.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-    avatar.position = Vector2(377, 75)
-    avatar.size = Vector2(139, 143)
+    avatar.position = Vector2(385, 71)
+    avatar.size = Vector2(125, 135)
     p.add_child(avatar)
-    _label(p, "CODENAME", Vector2(24, 79), Vector2(335, 25), 13, MUTED)
-    var name_line := _text_input(p, match_game.my_profile["name"], Vector2(23, 113), Vector2(320, 44))
-    name_line.text_submitted.connect(func(value: String): _update_profile("name", value))
-    name_line.focus_exited.connect(func(): _update_profile("name", name_line.text))
-    _label(p, "FRAKTION", Vector2(23, 232), Vector2(330, 24), 13, MUTED)
-    _dropdown(p, ["EDGERUNNERS / INFILTRATION", "MAELSTROM / DEFENSE"], ["edge", "punk"], match_game.my_profile["team"], Vector2(23, 260), func(v): _update_profile("team", v))
-    _label(p, "KLASSE", Vector2(23, 319), Vector2(320, 23), 13, MUTED)
-    _dropdown(p, ["STREET RUNNER / 5 FELDER", "NETRUNNER / 4 FELDER", "ENFORCER / 3 FELDER"], ["runner", "netrunner", "heavy"], match_game.my_profile["class_id"], Vector2(23, 348), func(v): _update_profile("class_id", v))
-    _label(p, "RÜSTUNGSFARBE", Vector2(23, 407), Vector2(320, 23), 13, MUTED)
-    _dropdown(p, ["NEON CYAN", "ULTRA VIOLET", "SUNSET GOLD", "MALWARE RED"], [0,1,2,3], match_game.my_profile["color_id"], Vector2(23, 435), func(v): _update_profile("color_id", v))
-    _label(p, "STARTWAFFE", Vector2(23, 496), Vector2(320, 23), 13, MUTED)
-    _dropdown(p, ["MANTIS AR / RIFLE", "NEON-9 / PISTOL", "STATIC / SMG"], ["rifle", "pistol", "smg"], match_game.my_profile["weapon"], Vector2(23, 525), func(v): _update_profile("weapon", v))
-    _label(p, "Die Auswahl wird an den Match-Host übertragen.", Vector2(23, 593), Vector2(505, 40), 14, MUTED)
+    _label(p, "CODENAME", Vector2(24, 74), Vector2(335, 25), 13, MUTED)
+    var nick := _input(p, str(match_game.my_profile["name"]), Vector2(23, 107), Vector2(335, 44))
+    nick.text_submitted.connect(func(v: String): _update_profile("name", v))
+    nick.focus_exited.connect(func(): _update_profile("name", nick.text))
+    _label(p, "TEAM / EINSATZSEITE", Vector2(23, 182), Vector2(365, 23), 13, MUTED)
+    _dropdown(p, ["BLUE // INFILTRATION", "RED // DEFENSE"], ["edge", "punk"], match_game.my_profile["team"], Vector2(23, 209), func(v): _update_profile("team", v))
+    _label(p, "FRAKTION", Vector2(23, 268), Vector2(310, 24), 13, MUTED)
+    var factions: Array = ["maelstrom", "edgerunner", "kobantec"]
+    if mode == "kidnap":
+        factions = ["maelstrom"] if match_game.my_profile["team"] == "punk" else ["edgerunner", "kobantec"]
+    var names: Array = []
+    for f_id in factions: names.append(GameRules.FACTIONS[f_id])
+    _dropdown(p, names, factions, match_game.my_profile["faction"], Vector2(23, 295), func(v): _update_profile("faction", v))
+    _label(p, "KLASSE / CYBERWARE", Vector2(23, 354), Vector2(335, 24), 13, MUTED)
+    var ids: Array = GameRules.classes_for_faction(str(match_game.my_profile["faction"]))
+    var class_names: Array = []
+    for role in ids: class_names.append(GameRules.CLASSES[role]["label"])
+    _dropdown(p, class_names, ids, match_game.my_profile["class_id"], Vector2(23, 382), func(v): _update_profile("class_id", v))
+    _label(p, "ARMOR COLOR", Vector2(23, 441), Vector2(325, 25), 13, MUTED)
+    _dropdown(p, ["NEON CYAN", "ULTRA VIOLET", "SUNSET GOLD", "MALWARE RED"], [0, 1, 2, 3], match_game.my_profile["color_id"], Vector2(23, 469), func(v): _update_profile("color_id", v))
+    var loadout: Dictionary = GameRules.CLASSES[str(match_game.my_profile["class_id"])]
+    _label(p, "WEAPON  // " + str(GameRules.WEAPONS[loadout["weapon"]]["label"]), Vector2(23, 535), Vector2(515, 30), 17, GOLD)
+    _label(p, "SKILL  // " + str(loadout["skill"]), Vector2(23, 568), Vector2(515, 27), 16, CYAN)
+    _label(p, "Host synchronisiert Operatoren und Spielregeln.\nBots sind im Solo-Training verfügbar.", Vector2(23, 626), Vector2(515, 65), 14, MUTED)
     var roster := _panel(interface_root, Vector2(609, 112), Vector2(794, 707), PANEL, MAGENTA)
-    _label(roster, "02 // MATCH-ROSTER", Vector2(24, 20), Vector2(720, 44), 24, MAGENTA)
-    _label(roster, "CODENAME                 FACTION                  CLASS", Vector2(25, 83), Vector2(730, 23), 14, MUTED)
+    _label(roster, "02 // MATCH ROSTER", Vector2(24, 20), Vector2(720, 44), 24, MAGENTA)
+    _label(roster, "CODENAME        SIDE        FACTION / CLASS", Vector2(25, 77), Vector2(743, 23), 14, MUTED)
     var index := 0
     for id in match_game.state["players"]:
         var member: Dictionary = match_game.state["players"][id]
-        var c := CYAN if member["team"] == "edge" else MAGENTA
-        _label(roster, "%s    /    %s    /    %s" % [member["name"], "EDGERUNNER" if member["team"] == "edge" else "MAELSTROM", str(member["class_id"]).to_upper()], Vector2(26, 119 + index * 46), Vector2(741, 40), 18, c)
+        var tint := CYAN if member["team"] == "edge" else MAGENTA
+        _label(roster, "%s   /   %s   /   %s  •  %s" % [member["name"], "BLUE" if member["team"] == "edge" else "RED", GameRules.FACTIONS[member["faction"]], GameRules.CLASSES[member["class_id"]]["label"]], Vector2(26, 120 + index * 45), Vector2(735, 38), 16, tint)
         index += 1
-    _label(roster, "PvP: Mindestens 1 Spieler je Fraktion. Der Host startet\ndas Match. Für einen ersten Test: Solo-Training im Menü.", Vector2(26, 517), Vector2(735, 64), 17, MUTED)
+    _label(roster, "Jede Seite benötigt mindestens einen Operator.\nHost validiert Bewegung, Schaden, Skills und Hacks.", Vector2(26, 513), Vector2(735, 70), 17, MUTED)
     if match_game.multiplayer.is_server():
-        _button(roster, "MISSION STARTEN", Vector2(23, 599), Vector2(744, 61), func(): match_game.request_start(), CYAN, true)
+        _button(roster, "MISSION STARTEN  //  " + GameRules.MODES[mode], Vector2(23, 594), Vector2(744, 61), func(): match_game.request_start(), CYAN, true)
     else:
-        _label(roster, "WARTE AUF DEN HOST ...", Vector2(27, 613), Vector2(720, 41), 23, GOLD)
+        _label(roster, "WARTE AUF DEN HOST ...", Vector2(27, 609), Vector2(720, 41), 23, GOLD)
     _button(interface_root, "ZURÜCK", Vector2(1235, 36), Vector2(167, 49), func(): _leave_match(), MAGENTA)
 
 func _header(title: String, subtitle: String) -> void:
