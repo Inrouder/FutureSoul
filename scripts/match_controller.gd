@@ -311,6 +311,135 @@ func _server_command(sender: int, action: String, cell: Vector2i) -> void:
     _check_victory()
     _publish()
 
+func _resolve_breach(sender: int, terminal: Vector2i, json_proof: String) -> void:
+    if state["mode"] != "hack": return
+    var proof: Variant = JSON.parse_string(json_proof)
+    if not proof is Array: return
+    var unit: Dictionary = state["players"][sender]
+    var enemy_side := "punk" if unit["team"] == "edge" else "edge"
+    var node_id: int = TERMINALS[enemy_side].find(terminal)
+    if node_id == -1: return
+    var progress: Array = state["hacked"][unit["team"]]
+    if progress.has(node_id): return
+    if node_id == 2 and (not progress.has(0) or not progress.has(1)): return
+    var cost := 1 if unit["class_id"] in ["e_runner", "k_raven"] else 2
+    if int(unit["ap"]) < cost or GameRules.range_between(unit["pos"], terminal) > 1: return
+    if not BreachRules.path_is_valid(node_id, proof): return
+    unit["ap"] = int(unit["ap"]) - cost
+    state["players"][sender] = unit
+    progress.append(node_id)
+    state["hacked"][unit["team"]] = progress
+    state["event"] = {"type": "hack", "actor": sender, "to": terminal, "seq": int(state["event"].get("seq", 0)) + 1}
+    if node_id == 2:
+        state["winner"] = unit["team"]
+        state["phase"] = "victory"
+        _log("MAINFRAME COMPROMISED // %s VICTORY" % str(unit["team"]).to_upper())
+    else:
+        _log("%s // CODE %d EXTRACTED" % [unit["name"], node_id + 1])
+
+func _deal_direct(shooter_id: int, target_id: int, amount: int, label: String) -> void:
+    if target_id == 0 or not state["players"].has(target_id): return
+    var target: Dictionary = state["players"][target_id]
+    if not target["alive"]: return
+    var shooter: Dictionary = state["players"][shooter_id]
+    var damage := maxi(1, amount - (18 if int(target.get("shield", 0)) > 0 else 0))
+    target["hp"] = maxi(0, int(target["hp"]) - damage)
+    if int(target["hp"]) == 0:
+        target["alive"] = false
+        if int(state["carrier"]) == target_id:
+            state["hostage"] = target["pos"]
+            state["carrier"] = 0
+    state["players"][target_id] = target
+    state["event"] = {"type": "fire", "from": shooter["pos"], "to": target["pos"], "hit": true, "actor": shooter_id, "seq": int(state["event"].get("seq", 0)) + 1}
+    _log("%s // %s  %d DMG" % [shooter["name"], label, damage])
+
+func _use_skill(sender: int, cell: Vector2i) -> bool:
+    var unit: Dictionary = state["players"][sender]
+    if int(unit["ap"]) < 2 or int(unit.get("cooldown", 0)) > 0: return false
+    var role := str(unit["class_id"])
+    var target_id := _enemy_at(sender, cell)
+    var distance := GameRules.range_between(unit["pos"], cell)
+    match role:
+        "m_gunner", "heavy":
+            if target_id == 0 or distance > 7 or not _can_shoot(unit, cell): return false
+            _deal_direct(sender, target_id, 24, "SUPPRESSION")
+            var target: Dictionary = state["players"][target_id]
+            target["jam"] = 2
+            state["players"][target_id] = target
+        "m_brawler":
+            if distance > 2 or target_id == 0: return false
+            for id in state["players"]:
+                var foe: Dictionary = state["players"][id]
+                if foe["alive"] and foe["team"] != unit["team"] and GameRules.range_between(foe["pos"], cell) <= 2:
+                    _deal_direct(sender, int(id), 39, "MANTIS RUSH")
+        "m_shooty":
+            if target_id == 0 or not _can_shoot(unit, cell): return false
+            _resolve_shot(sender, target_id, false)
+            if state["players"][target_id]["alive"]:
+                _resolve_shot(sender, target_id, false)
+        "e_big":
+            if target_id == 0 or distance > 7 or not _can_shoot(unit, cell): return false
+            _deal_direct(sender, target_id, 88, "POWER SHOT")
+        "e_sniper":
+            if target_id == 0 or distance > 16 or GameRules.blockers_on_ray(unit["pos"], cell, arena.blockers) > 1: return false
+            _deal_direct(sender, target_id, 76, "GHOST RAIL")
+        "e_psycho":
+            unit["speed_boost"] = 3
+            unit["shield"] = 2
+            _log("%s // OVERDRIVE ENGAGED" % unit["name"])
+        "e_runner", "netrunner":
+            if target_id == 0 or distance > 6 or not GameRules.has_line_of_sight(unit["pos"], cell, arena.blockers): return false
+            var target: Dictionary = state["players"][target_id]
+            target["jam"] = 2
+            state["players"][target_id] = target
+            _deal_direct(sender, target_id, 12, "NEURAL JAM")
+        "k_first":
+            unit["stealth"] = 3
+            _log("%s // GHOST CLOAK ACTIVE" % unit["name"])
+        "k_rocky":
+            unit["shield"] = 3
+            for id in state["players"]:
+                var foe: Dictionary = state["players"][id]
+                if foe["alive"] and foe["team"] != unit["team"] and GameRules.range_between(foe["pos"], unit["pos"]) <= 2:
+                    _deal_direct(sender, int(id), 38, "SHIELD BASH")
+            _log("%s // SHIELD DEPLOYED" % unit["name"])
+        "k_raven":
+            if target_id == 0 or distance > 7 or not GameRules.has_line_of_sight(unit["pos"], cell, arena.blockers): return false
+            _deal_direct(sender, target_id, 36, "ARC CHAIN")
+            for id in state["players"]:
+                if int(id) == target_id: continue
+                var foe: Dictionary = state["players"][id]
+                if foe["alive"] and foe["team"] != unit["team"] and GameRules.range_between(foe["pos"], cell) <= 4:
+                    _deal_direct(sender, int(id), 23, "CHAIN LIGHTNING")
+        "runner":
+            unit["speed_boost"] = 3
+            _log("%s // DASH ENABLED" % unit["name"])
+        _:
+            return false
+    var refreshed: Dictionary = state["players"][sender]
+    refreshed["ap"] = int(refreshed["ap"]) - 2
+    refreshed["cooldown"] = 3
+    for effect in ["speed_boost", "shield", "stealth"]:
+        refreshed[effect] = maxi(int(refreshed.get(effect, 0)), int(unit.get(effect, 0)))
+    state["players"][sender] = refreshed
+    return true
+
+func _use_portal(sender: int, cell: Vector2i) -> bool:
+    var unit: Dictionary = state["players"][sender]
+    if unit["class_id"] != "k_raven" or int(unit["ap"]) < 2: return false
+    if arena.is_blocked(cell) or GameRules.range_between(unit["pos"], cell) > 5: return false
+    if unit["pos"].x != cell.x and unit["pos"].y != cell.y: return false
+    if GameRules.blockers_on_ray(unit["pos"], cell, arena.blockers) != 1: return false
+    for id in state["players"]:
+        if id != sender and state["players"][id]["alive"] and state["players"][id]["pos"] == cell: return false
+    var origin: Vector2i = unit["pos"]
+    unit["pos"] = cell
+    unit["ap"] = int(unit["ap"]) - 2
+    state["players"][sender] = unit
+    state["event"] = {"type": "portal", "from": origin, "to": cell, "actor": sender, "seq": int(state["event"].get("seq", 0)) + 1}
+    _log("%s // QUANTUM GATE OPENED" % unit["name"])
+    return true
+
 func _enemy_at(shooter_id: int, cell: Vector2i) -> int:
     var team: String = state["players"][shooter_id]["team"]
     for id in state["players"]:
