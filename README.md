@@ -78,7 +78,7 @@ GitHub Actions erzeugt bei erfolgreichem Build eine portable Windows-x64-Version
 3. Unter **Artifacts** `FutureSoul-Windows-v0.2` herunterladen.
 4. ZIP entpacken, **FutureSoul.exe** und die zugehörige **.pck-Datei** im selben Verzeichnis belassen und FutureSoul.exe starten.
 
-Die automatisch erzeugten Artifacts werden nach 30 Tagen entfernt. Windows meldet bei unsignierten Indie-Apps gegebenenfalls einen SmartScreen-Hinweis. Der Export ist nicht digital signiert.
+Der Download benötigt keinen Godot-Editor; die EXE startet aus dem entpackten Spielordner. Die automatisch erzeugten Artifacts werden nach 30 Tagen entfernt. Windows meldet bei unsignierten Indie-Apps gegebenenfalls einen SmartScreen-Hinweis. Der Export ist nicht digital signiert.
 
 ## Nächste Entwicklungsstufen
 
