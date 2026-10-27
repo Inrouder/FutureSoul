@@ -233,7 +233,7 @@ func _tick_bullets(dt: float) -> void:
     var damage: float=b.damage
     if v.has("shield") and float(v.shield)>0: damage*=0.35
     v.hp=maxf(0.0,float(v.hp)-damage)
-    if v==player: flash=0.13
+    if int(b.team)==1 and v==player: flash=0.13
     if float(v.hp)<=0:
      score+=1
      message="TARGET ELIMINATED"
@@ -347,7 +347,7 @@ func _menu_draw() -> void:
  _text(Vector2(944,656),"E / OBJECTIVE",16)
  _text(Vector2(68,709),net_note,14,Color("#91acb7"))
 func _option(pos: Vector2,t: String,on: bool) -> void:
- _rect(Rect2(pos,365 if pos.x<430 else 373,35),Color("#1a5863") if on else Color("#142236"),Color("#3ce9e4") if on else Color("#355264"))
+ _rect(Rect2(pos,Vector2(365 if pos.x<430 else 373,35)),Color("#1a5863") if on else Color("#142236"),Color("#3ce9e4") if on else Color("#355264"))
  _text(pos+Vector2(10,24),t,16,Color("#ffe37b") if on else Color("#b5cbda"))
 func _map_draw() -> void:
  draw_rect(WORLD,Color("#162b36"))
