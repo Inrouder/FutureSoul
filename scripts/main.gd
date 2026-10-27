@@ -225,6 +225,17 @@ func _sprite_role(profile: Dictionary) -> String:
     if role in ["e_runner", "k_raven", "netrunner"]: return "netrunner"
     return "runner"
 
+func _show_actor_preview(parent: Control, profile: Dictionary, center: Vector2, zoom: float) -> void:
+    var preview_unit := FutureActor.new()
+    preview_unit.position = center
+    preview_unit.scale = Vector2(zoom, zoom)
+    parent.add_child(preview_unit)
+    var costume := profile.duplicate()
+    costume["hp"] = GameRules.CLASSES[str(profile["class_id"])]["health"]
+    costume["name"] = "OPERATOR"
+    costume["active"] = true
+    preview_unit.configure(costume)
+
 func _choose_mode(value: String) -> void:
     match_game.selected_mode = GameRules.valid_mode(value)
     if value == "kidnap" and match_game.my_profile["faction"] == "maelstrom":
@@ -267,13 +278,7 @@ func _show_menu() -> void:
     _label(p, "LAN: IP-Adresse des Hosts eingeben. Für Internet\nVPN oder UDP-Portweiterleitung erforderlich.", Vector2(41, 624), Vector2(491, 66), 14, MUTED)
     _label(p, "02 // OPERATIVE DESIGNER", Vector2(604, 159), Vector2(500, 29), 19, CYAN)
     var preview := _panel(p, Vector2(970, 203), Vector2(164, 167), Color("0b1826"), MAGENTA)
-    var avatar := TextureRect.new()
-    avatar.texture = load("res://assets/units/%s_%d.png" % [_sprite_role(match_game.my_profile), match_game.my_profile["color_id"]])
-    avatar.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-    avatar.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-    avatar.position = Vector2(28, 20)
-    avatar.size = Vector2(112, 126)
-    preview.add_child(avatar)
+    _show_actor_preview(preview, match_game.my_profile, Vector2(83, 102), 2.8)
     _label(p, "CODENAME", Vector2(604, 204), Vector2(300, 26), 14, MUTED)
     var nick := _input(p, str(match_game.my_profile["name"]), Vector2(604, 236), Vector2(290, 44))
     nick.text_submitted.connect(func(v: String): _update_profile("name", v))
@@ -306,13 +311,7 @@ func _show_lobby() -> void:
     _header("LOBBY // OPERATIVE CONFIGURATION", GameRules.MODES[mode] + "  /  AWAITING SQUADS")
     var p := _panel(interface_root, Vector2(38, 112), Vector2(553, 707), PANEL)
     _label(p, "01 // CHARACTER DESIGNER", Vector2(23, 20), Vector2(505, 42), 23, CYAN)
-    var avatar := TextureRect.new()
-    avatar.texture = load("res://assets/units/%s_%d.png" % [_sprite_role(match_game.my_profile), match_game.my_profile["color_id"]])
-    avatar.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-    avatar.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-    avatar.position = Vector2(385, 71)
-    avatar.size = Vector2(125, 135)
-    p.add_child(avatar)
+    _show_actor_preview(p, match_game.my_profile, Vector2(450, 153), 2.7)
     _label(p, "CODENAME", Vector2(24, 74), Vector2(335, 25), 13, MUTED)
     var nick := _input(p, str(match_game.my_profile["name"]), Vector2(23, 107), Vector2(335, 44))
     nick.text_submitted.connect(func(v: String): _update_profile("name", v))
