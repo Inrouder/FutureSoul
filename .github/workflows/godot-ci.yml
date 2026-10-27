@@ -27,4 +27,6 @@ jobs:
       - name: Godot import and static script parsing
         run: godot --headless --path . --editor --quit
       - name: Pure game-rule smoke tests
-        run: godot --headless --path . --script res://tests/rules_smoke.gd
+        run: timeout 35s godot --headless --path . --script res://tests/rules_smoke.gd
+      - name: Boot main game scene (20 frames)
+        run: timeout 35s godot --headless --path . --quit-after 20
