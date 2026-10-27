@@ -68,6 +68,18 @@ godot --headless --path . --script res://tests/rules_smoke.gd
 godot --headless --path . --script res://tests/match_smoke.gd
 ```
 
+
+## Portable Windows-Demo herunterladen
+
+GitHub Actions erzeugt bei erfolgreichem Build eine portable Windows-x64-Version:
+
+1. In GitHub die [Windows playable demo](https://github.com/Inrouder/FutureSoul/actions/workflows/windows-demo.yml) öffnen.
+2. Einen erfolgreichen Durchlauf (**grüner Haken**) auswählen.
+3. Unter **Artifacts** `FutureSoul-Windows-v0.2` herunterladen.
+4. ZIP entpacken, **FutureSoul.exe** und die zugehörige **.pck-Datei** im selben Verzeichnis belassen und FutureSoul.exe starten.
+
+Die automatisch erzeugten Artifacts werden nach 30 Tagen entfernt. Windows meldet bei unsignierten Indie-Apps gegebenenfalls einen SmartScreen-Hinweis. Der Export ist nicht digital signiert.
+
 ## Nächste Entwicklungsstufen
 
 Eigener Level-Editor mit Karten-Speicherformat, bessere taktische NPC-Bots, weitere Charakter-Outfits, zusätzliche Animationen/Partikel, Sounddesign, Fairness-Balancing, Verbindungsabbrüche/Session-Reconnect, Internet-Lobby und Anti-Cheat-Härtung.
