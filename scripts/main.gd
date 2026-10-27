@@ -39,6 +39,7 @@ func _ready() -> void:
     interface_root = Control.new()
     interface_root.name = "FutureSoulUI"
     interface_root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+    interface_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
     ui_layer.add_child(interface_root)
     _on_updated()
 
