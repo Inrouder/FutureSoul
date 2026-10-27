@@ -93,7 +93,8 @@ func _draw() -> void:
     if jammed > 0:
         draw_line(Vector2(-16, -15), Vector2(-5, -27), Color("f4d84c"), 2)
     draw_rect(Rect2(-16, -26, 32, 3), Color("0b1120"))
-    draw_rect(Rect2(-15, -25, maxf(0.0, health / (130.0 if role == "heavy" else 100.0) * 30.0), 1), Color("63e5b0") if health > 30 else Color("fb5369"))
+    var full_hp: float = float(GameRules.CLASSES[class_id]["health"])
+    draw_rect(Rect2(-15, -25, clampf(float(health) / full_hp * 30.0, 0.0, 30.0), 1), Color("63e5b0") if health > 30 else Color("fb5369"))
     if carrying:
         draw_circle(Vector2(0, -34), 3, Color("f6c66d"))
     if font:
