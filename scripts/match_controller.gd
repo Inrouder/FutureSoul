@@ -38,7 +38,10 @@ func _default_player(id: int, incoming: Dictionary, team: String) -> Dictionary:
     if selected_mode == "kidnap" and team == "edge" and faction == "maelstrom": faction = "edgerunner"
     var class_id := GameRules.allowed_class(str(incoming.get("class_id", "e_runner")))
     if not class_id in GameRules.classes_for_faction(faction): class_id = str(GameRules.classes_for_faction(faction)[0])
-    return {"id": id, "name": str(incoming.get("name", "GHOST")).substr(0, 15), "team": team, "faction": faction, "class_id": class_id, "color_id": clampi(int(incoming.get("color_id", 0)), 0, 3), "weapon": str(GameRules.CLASSES[class_id]["weapon"]), "hp": 100, "ap": 0, "pos": Vector2i.ZERO, "alive": true, "overwatch": false, "bot": false, "cooldown": 0, "stealth": 0, "shield": 0, "jam": 0, "speed_boost": 0}
+    var weapon := str(incoming.get("weapon", GameRules.CLASSES[class_id]["weapon"]))
+    if not GameRules.equipment_for_class(class_id).has(weapon):
+        weapon = str(GameRules.CLASSES[class_id]["weapon"])
+    return {"id": id, "name": str(incoming.get("name", "GHOST")).substr(0, 15), "team": team, "faction": faction, "class_id": class_id, "color_id": clampi(int(incoming.get("color_id", 0)), 0, 3), "weapon": weapon, "hp": 100, "ap": 0, "pos": Vector2i.ZERO, "alive": true, "overwatch": false, "bot": false, "cooldown": 0, "stealth": 0, "shield": 0, "jam": 0, "speed_boost": 0}
 
 func start_host() -> void:
     _disconnect_peer()
@@ -165,7 +168,10 @@ func _set_profile(id: int, data: Dictionary) -> void:
     if not p["class_id"] in GameRules.classes_for_faction(p["faction"]):
         p["class_id"] = str(GameRules.classes_for_faction(p["faction"])[0])
     p["color_id"] = clampi(int(data.get("color_id", p["color_id"])), 0, 3)
-    p["weapon"] = str(GameRules.CLASSES[p["class_id"]]["weapon"])
+    var weapon := str(data.get("weapon", p["weapon"]))
+    if not GameRules.equipment_for_class(p["class_id"]).has(weapon):
+        weapon = str(GameRules.CLASSES[p["class_id"]]["weapon"])
+    p["weapon"] = weapon
     state["players"][id] = p
     _publish()
 
@@ -450,7 +456,7 @@ func _enemy_at(shooter_id: int, cell: Vector2i) -> int:
 func _can_shoot(unit: Dictionary, cell: Vector2i) -> bool:
     if GameRules.range_between(unit["pos"], cell) > int(GameRules.weapon_for_unit(unit)["range"]):
         return false
-    if unit["class_id"] == "e_sniper":
+    if unit["class_id"] == "e_sniper" and unit["weapon"] == "sniper":
         return GameRules.blockers_on_ray(unit["pos"], cell, arena.blockers) <= 1
     return GameRules.has_line_of_sight(unit["pos"], cell, arena.blockers)
 
@@ -566,7 +572,9 @@ func receive_state(snapshot: Dictionary) -> void:
     if multiplayer.is_server(): return
     state = snapshot
     if state["players"].has(local_id):
-        my_profile["team"] = state["players"][local_id]["team"]
+        var authoritative: Dictionary = state["players"][local_id]
+        for key in ["team", "faction", "class_id", "color_id", "weapon"]:
+            my_profile[key] = authoritative[key]
     updated.emit()
 
 func _schedule_bot_if_needed() -> void:
