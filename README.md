@@ -1,70 +1,75 @@
 # FUTURE / SOUL
 
-**A cyberpunk, turn-based top-down tactical shooter made with Godot 4.4.1.** Original pixel-art tiles and character sprites; peer-to-peer LAN sessions with authoritative host-side rules.
+**Cyberpunk-Taktikshooter · Godot 4.4.1 · Top-down · rundenbasiert · LAN-PvP**
 
-> **Status: v0.1.0 prototype.** This is a small playable foundation, not a finished game. It is not a commercial release. The pictures provided in the original conversation are *visual references only*; no assets are copied from them.
+> **Status: spielbarer Entwicklungsprototyp v0.2.0.** Die drei grundlegenden Modi, Fraktions-/Charakterauswahl, Spezialfähigkeiten und das Code-Matrix-Minispiel sind implementiert. Keine finale Veröffentlichung oder ausbalancierte Vollversion. Spieltests auf zwei echten Windows-PCs stehen noch aus.
 
-## Art direction
+![FutureSoul concept preview](docs/preview.png)
 
-![FutureSoul concept mock-up](docs/preview.png)
+*Dies ist ein Design-Mockup mit originalen FutureSoul-Sprites, kein echter In-Game-Screenshot. Die eingebauten Pixelart-Assets liegen unter `assets/`; der Sprite-Generator ist `tools/build_art.py`.*
 
-*Visual concept assembled from the game's original pixel sprites. It is not a screenshot from a running Godot build.*
+## Starten
 
-The game runs at 1440×900 with 32×32 hand-drawn pixel art, high-contrast neon cyan / magenta interface elements, a dirty industrial tileset, console terminals, crates and hazard floors. The original PNGs are reproducible from `tools/build_art.py` with Pillow.
+1. [Godot 4.4.1](https://godotengine.org/download/archive/4.4.1-stable/) herunterladen.
+2. Repository als ZIP herunterladen, entpacken, `project.godot` mit Godot öffnen.
+3. **F5**: Spiel starten. Wähle rechts Fraktion, Spezialklasse, Rüstungsfarbe und Waffen-Loadout.
+4. Links Modus wählen und **Solo-Training** für den lokalen Test oder **Host erstellen** für LAN-PvP auswählen.
+5. Zweiter PC: **Join** und die LAN-IPv4-Adresse des Hosts eingeben, Port **UDP 7777**. Kein dedizierter Server, Matchmaking oder NAT-Traversal.
 
-## Getting started
+## Spielmodi
 
-1. Install [Godot 4.4.1](https://godotengine.org/download/archive/4.4.1-stable/).
-2. Clone or download the repository.
-3. Open `project.godot` in Godot and press **F6/F5** to run the main scene/project.
-4. Select **Solo-Training / vs Bots** to play instantly, or **Host erstellen** and join with a second Godot instance for online PvP.
-5. On a different computer, enter the host's LAN IPv4 address and select **Beitreten**. Network traffic uses **UDP 7777**. For Internet play you must forward this port (or use a VPN such as Tailscale); automatic matchmaking and NAT traversal are not implemented.
-
-## Mode 01: Maelstrom Kidnap
-
-- **Edgerunners (blue)**: Reach the hostage NPC in the right-side compound, select **Geisel**, then escape together through the luminous green extraction zone at the left.
-- **Maelstrom (red)**: Prevent extraction for 12 rounds or eliminate the opposing squad.
-- **Victory**: Blue wins with extraction or by eliminating the defending team. Red wins if all attackers die or the turn limit is exceeded.
-- **Turn economy**: 3 action points per unit turn; move (1 AP, distance depends on class), fire (2 AP), secure hostage (1 AP), overwatch (1 AP), end turn (free).
-- **Three classes**: Street Runner (95 HP, 5 steps), Netrunner (90 HP, 4 steps), Enforcer (130 HP, 3 steps).
-- **Three weapons**: NEON-9 pistol, MANTIS AR rifle, STATIC SMG; each has separate range, accuracy and damage.
-- **Cover / sightlines**: Solid props and walls block movement and gunfire; adjacency to cover reduces hit probability.
-- **Bots**: Offline training supplies two simple host-controlled Maelstrom opponents. They move toward targets and fire when possible. Bots are intentionally basic.
-- **PvP**: Godot ENet reliable RPC synchronizes participant profiles and the match state; only the host validates game actions, costs, hit rolls, victory conditions, movement paths and visibility.
-
-**Controls:** Left click a tile/target; **1** move, **2** fire, **3** interact with hostage (when adjacent), **4** overwatch, **Space** end turn.
-
-## Architecture
-
-| Path | Purpose |
+| Modus | Ziel |
 | --- | --- |
-| `scenes/main.tscn` | Boot scene |
-| `scripts/main.gd` | HUD, character editor, inputs, effects |
-| `scripts/arena.gd` | Arena tiles, industrial set dressing, blockers and extraction zones |
-| `scripts/actor.gd` | Pixel character visuals, HP and team rings |
-| `scripts/game_rules.gd` | Pure turn rules, pathfinding, line of sight and weapon/class definitions |
-| `scripts/match_controller.gd` | Multiplayer, authoritative simulation, rescue logic, turns and bots |
-| `assets/tiles/` | Original 32×32 pixel environment sprites |
-| `assets/units/` | Original 32×32 operator sprites, 4 palette options |
-| `tools/build_art.py` | Regenerate the artwork using Python Pillow |
-| `tests/rules_smoke.gd` | Headless game-rule smoke tests |
+| **01 / Maelstrom Kidnap** | Blaue Seite (Edgerunner oder Kobantec) befreit die Geisel in der Maelstrom-Basis und bringt sie zur grünen Extraktionszone. Rot hält die 12-Runden-Frist oder eliminiert die Angreifer. |
+| **02 / Base vs Base** | Zwei Teams verteidigen je einen Stützpunkt und schalten das feindliche Team aus. Rundengrenze: der höhere verbliebene Team-HP-Wert entscheidet, Gleichstand möglich. |
+| **03 / Hack the Base** | Im gegnerischen Stützpunkt an den Terminals **01** und **02** nacheinander Zugangscodes extrahieren, danach den gegnerischen **CORE** hacken. Jede Codeextraktion erfordert die spielbare vierteilige Code-Matrix. |
 
-Run tests in Godot:
+**Hack-Regeln:** Starte in der oberen Zeile; wähle danach abwechselnd in derselben Spalte und derselben Zeile. Der Host prüft alle vier gewählten Koordinaten und die AP-Kosten. Netrunner (Edgerunner) und Raven zahlen nur 1 AP je erfolgreichem Hack.
 
+## Fraktionen & Klassen
+
+| Fraktion | Klasse | Besonderheit |
+| --- | --- | --- |
+| **Maelstrom** | Gunner | Schweres MG; Unterdrückung und Waffenblockade |
+| | Punk Schläger | Smartpistole/Mantisklingen; Flächen-Nahkampf |
+| | Shooty | Punk-Schrotflinte; Doppelschuss |
+| **Edgerunner** | The Big | Extrem starke Handkanone; Powerschuss |
+| | The Snipeout | Sniper; eine Wand durchdringen, Scharfschützen-Skill |
+| | Cyberpsycho | Mantisklingen; Overdrive für Tempo und Schutz |
+| | Netrunner | Monowire / Pistole; Waffen-Jam |
+| **Kobantec / Dragon Clan** | First Warrior | Laserkatana / schallgedämpfte Pistole; kurzzeitige Tarnung |
+| | The Rocky | Tank-Klasse; Schutzschild und Schlagflächen-Angriff |
+| | Raven | Kettenblitz; Portal durch **eine** Wand |
+
+Jede Klasse hat eigene Gesundheit, Bewegung, Waffe, optionales Alternativ-Loadout und einen Spezialangriff/einen Cyberware-Skill. Die Pixel-Silhouetten verwenden unterschiedliche Ausrüstungs- und Cyberware-Overlays.
+
+## Bedienung
+
+**Linksklick**: Feld / Gegner / Zielterminal anvisieren. **1** Bewegen, **2** Schießen, **3** Cyberware-Fähigkeit, **4** Overwatch, **5** Geiselinteraktion oder Code-Breach (modusabhängig), **6** Ravens Wandportal, **Leertaste** Zug beenden. Im Hack-Raster Ziffern in der vorgegebenen Reihenfolge anklicken; **Esc** schließt das Terminal.
+
+Im Solo-Training spielt ein menschlicher Operator gegen einfache Maelstrom-Bots. Der Host wertet Treffer, Bewegung, Aktionen, Hacks und Siegbedingungen aus; der Charakter-/Lobby-Zustand wird per ENet-RPC synchronisiert. Internetbetrieb benötigt eigenes Portforwarding oder ein VPN.
+
+## Architektur und Prüfung
+
+- `scripts/game_rules.gd`: Fraktionen, zehn Klassen, Waffendaten und Kampfgrundregeln.
+- `scripts/match_controller.gd`: Runden, Ziele, Fähigkeiten, Bots und autoritativer ENet-Host.
+- `scripts/breach_rules.gd`: reproduzierbares Code-Raster und serverseitige Validierung.
+- `scripts/code_breach.gd`: gelb-schwarzes Cyberdeck-UI mit Eingabebuffer und Zeitlimit.
+- `scripts/arena.gd`: Pixel-Industriekarte, Deckung und Missionsmarker.
+- `scripts/actor.gd`: Klassen-/Cyberware-Layer.
+- `scripts/main.gd`: Startmenü, Editor, Lobby, Kampf-HUD und Eingaben.
+- `tests/rules_smoke.gd`, `tests/match_smoke.gd`: Regeln, Hacking-Beweise und alle drei Missionsziele.
+- `.github/workflows/godot-check.yml`: automatische Godot-Headless-Checks bei Push.
+
+Godot-Tests lokal:
 ```bash
 godot --headless --path . --editor --quit
 godot --headless --path . --script res://tests/rules_smoke.gd
+godot --headless --path . --script res://tests/match_smoke.gd
 ```
 
-## Next milestones
+## Nächste Entwicklungsstufen
 
-1. Multiplayer disconnection recovery, room codes, dedicated server and lobby ready states.
-2. Full cover states, tactical fog of war, AP previews, weapon animations and richer environmental art.
-3. Character accessories and layered outfit editor, more skills, character progression and unlocks.
-4. Scenario editor with saved tile maps and scenarios, public/private map sharing.
-5. NPC squad bots with cover seeking, rescue/defense strategies and difficulty levels.
-6. Two additional game modes **to be specified by the project owner**; no unrequested modes are hardcoded.
+Eigener Level-Editor mit Karten-Speicherformat, bessere taktische NPC-Bots, weitere Charakter-Outfits, zusätzliche Animationen/Partikel, Sounddesign, Fairness-Balancing, Verbindungsabbrüche/Session-Reconnect, Internet-Lobby und Anti-Cheat-Härtung.
 
-## Rights
-
-All generated pixel sprites and the source code included here were created for FutureSoul. Names and references such as “Maelstrom” and “Edgerunner” evoke an existing cyberpunk universe; the project is not affiliated with that franchise. For a standalone commercial game, adopt original faction names and independently commissioned artwork.
+**Rechtlicher Hinweis:** FutureSoul ist ein unabhängiges Fan-inspiriertes Projekt. Bezeichnungen wie „Maelstrom“ und „Edgerunner“ sind an bekannte Fiktion angelehnt. Für einen kommerziellen Release sind eigenständige Namen und entsprechende IP-Prüfung notwendig.
