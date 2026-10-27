@@ -273,14 +273,14 @@ func _show_menu() -> void:
     _button(p, "SOLO-TRAINING STARTEN", Vector2(39, 432), Vector2(490, 58), func(): match_game.start_training(), CYAN, true)
     _label(p, "LAN MULTIPLAYER   //   UDP 7777", Vector2(40, 510), Vector2(485, 29), 15, GOLD)
     _button(p, "HOST ERSTELLEN", Vector2(39, 545), Vector2(218, 54), func(): match_game.start_host(), CYAN)
-    join_ip = _input(p, "127.0.0.1", Vector2(271, 548), Vector2(168, 48))
+    join_ip = _text_field(p, "127.0.0.1", Vector2(271, 548), Vector2(168, 48))
     _button(p, "JOIN", Vector2(447, 545), Vector2(82, 54), func(): match_game.start_join(join_ip.text), GOLD)
     _label(p, "LAN: IP-Adresse des Hosts eingeben. Für Internet\nVPN oder UDP-Portweiterleitung erforderlich.", Vector2(41, 624), Vector2(491, 66), 14, MUTED)
     _label(p, "02 // OPERATIVE DESIGNER", Vector2(604, 159), Vector2(500, 29), 19, CYAN)
     var preview := _panel(p, Vector2(970, 203), Vector2(164, 167), Color("0b1826"), MAGENTA)
     _show_actor_preview(preview, match_game.my_profile, Vector2(83, 102), 2.8)
     _label(p, "CODENAME", Vector2(604, 204), Vector2(300, 26), 14, MUTED)
-    var nick := _input(p, str(match_game.my_profile["name"]), Vector2(604, 236), Vector2(290, 44))
+    var nick := _text_field(p, str(match_game.my_profile["name"]), Vector2(604, 236), Vector2(290, 44))
     nick.text_submitted.connect(func(v: String): _update_profile("name", v))
     nick.focus_exited.connect(func(): _update_profile("name", nick.text))
     _label(p, "FRAKTION", Vector2(604, 296), Vector2(312, 24), 14, MUTED)
@@ -313,7 +313,7 @@ func _show_lobby() -> void:
     _label(p, "01 // CHARACTER DESIGNER", Vector2(23, 20), Vector2(505, 42), 23, CYAN)
     _show_actor_preview(p, match_game.my_profile, Vector2(450, 153), 2.7)
     _label(p, "CODENAME", Vector2(24, 74), Vector2(335, 25), 13, MUTED)
-    var nick := _input(p, str(match_game.my_profile["name"]), Vector2(23, 107), Vector2(335, 44))
+    var nick := _text_field(p, str(match_game.my_profile["name"]), Vector2(23, 107), Vector2(335, 44))
     nick.text_submitted.connect(func(v: String): _update_profile("name", v))
     nick.focus_exited.connect(func(): _update_profile("name", nick.text))
     _label(p, "TEAM / EINSATZSEITE", Vector2(23, 182), Vector2(365, 23), 13, MUTED)
@@ -392,7 +392,7 @@ func _show_battle() -> void:
     var mine: Dictionary = state["players"].get(match_game.local_id, {})
     if not mine.is_empty():
         _label(side, "YOUR CYBERWARE // " + str(GameRules.CLASSES[mine["class_id"]]["skill"]), Vector2(18, 262), Vector2(409, 28), 15, CYAN)
-    var your_turn := state["phase"] == "battle" and active == match_game.local_id and not mine.is_empty() and mine["alive"]
+    var your_turn: bool = state["phase"] == "battle" and active == match_game.local_id and not mine.is_empty() and bool(mine["alive"])
     _label(side, "COMMANDS // %s" % ["YOUR TURN" if your_turn else "STANDBY"], Vector2(18, 298), Vector2(411, 26), 16, GOLD)
     var buttons: Array = [
         ["1 / MOVE", "move", CYAN], ["2 / FIRE", "fire", MAGENTA],
