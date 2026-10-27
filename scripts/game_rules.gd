@@ -134,16 +134,16 @@ static func has_line_of_sight(start: Vector2i, goal: Vector2i, obstacles: Dictio
     return true
 
 static func blockers_on_ray(start: Vector2i, goal: Vector2i, obstacles: Dictionary) -> int:
-    var x := start.x
-    var y := start.y
-    var dx := abs(goal.x - x)
-    var dy := abs(goal.y - y)
-    var sx := 1 if x < goal.x else -1
-    var sy := 1 if y < goal.y else -1
-    var error := dx - dy
+    var x: int = start.x
+    var y: int = start.y
+    var dx: int = absi(goal.x - x)
+    var dy: int = absi(goal.y - y)
+    var sx: int = 1 if x < goal.x else -1
+    var sy: int = 1 if y < goal.y else -1
+    var error: int = dx - dy
     var count := 0
     while x != goal.x or y != goal.y:
-        var twice := 2 * error
+        var twice: int = 2 * error
         if twice > -dy:
             error -= dy
             x += sx
