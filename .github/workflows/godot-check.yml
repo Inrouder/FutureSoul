@@ -1,0 +1,21 @@
+name: Godot validation
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  validation:
+    runs-on: ubuntu-latest
+    container:
+      image: barichello/godot-ci:4.4.1
+    steps:
+      - uses: actions/checkout@v4
+      - name: Import sprites and validate all scenes and scripts
+        run: godot --headless --path . --editor --quit
+      - name: Rules, specialist, and hacking-proof tests
+        run: godot --headless --path . --script res://tests/rules_smoke.gd
+      - name: Simulate all three match objectives
+        run: godot --headless --path . --script res://tests/match_smoke.gd
