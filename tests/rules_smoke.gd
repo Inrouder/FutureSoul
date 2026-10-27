@@ -20,6 +20,7 @@ func _initialize() -> void:
             ok = _check(loadouts.size() >= 2, "class equipment options " + unit_class) and ok
             for weapon_id in loadouts:
                 ok = _check(GameRules.WEAPONS.has(weapon_id), "weapon defined " + weapon_id) and ok
+    ok = _check(GameRules.equipment_for_class("k_first").has("silenced"), "First Warrior stealth sidearm") and ok
     ok = _check(GameRules.MODES.size() == 3, "all three tactical modes present") and ok
     ok = _check(GameRules.classes_for_faction("maelstrom").size() == 3, "maelstrom three specialists") and ok
     ok = _check(GameRules.classes_for_faction("edgerunner").size() == 4, "edgerunner four specialists") and ok
