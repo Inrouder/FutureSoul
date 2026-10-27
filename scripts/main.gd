@@ -290,9 +290,13 @@ func _show_menu() -> void:
     _label(p, "ARMOR TINT", Vector2(604, 484), Vector2(300, 23), 14, MUTED)
     _dropdown(p, ["NEON CYAN", "ULTRA VIOLET", "SUNSET GOLD", "MALWARE RED"], [0, 1, 2, 3], match_game.my_profile["color_id"], Vector2(604, 514), func(v): _update_profile("color_id", v))
     var loadout: Dictionary = GameRules.CLASSES[match_game.my_profile["class_id"]]
-    _label(p, "LOADOUT // " + str(GameRules.WEAPONS[loadout["weapon"]]["label"]), Vector2(604, 584), Vector2(514, 28), 17, GOLD)
-    _label(p, "CYBERWARE // " + str(loadout["skill"]), Vector2(604, 615), Vector2(514, 28), 16, CYAN)
-    _label(p, "KLASSENWAFFEN SIND BALANCIERT FEST ZUGEWIESEN.\nINDIVIDUELLE OUTFITS UND AUSRÜSTUNGSSLOTS FOLGEN.", Vector2(604, 660), Vector2(514, 56), 13, MUTED)
+    _label(p, "AUSRUESTUNG / WEAPON", Vector2(604, 575), Vector2(514, 28), 14, GOLD)
+    var equipment: Array = GameRules.equipment_for_class(str(match_game.my_profile["class_id"]))
+    var weapon_names: Array = []
+    for weapon_id in equipment: weapon_names.append(GameRules.WEAPONS[weapon_id]["label"])
+    _dropdown(p, weapon_names, equipment, match_game.my_profile["weapon"], Vector2(604, 606), func(v): _update_profile("weapon", v))
+    _label(p, "CYBERWARE // " + str(loadout["skill"]), Vector2(604, 663), Vector2(514, 28), 16, CYAN)
+    _label(p, "Jede Klasse besitzt passende Waffen-Loadouts.\\nWeitere Ruestungs- und Outfit-Slots folgen.", Vector2(604, 694), Vector2(514, 46), 13, MUTED)
     if match_game.state["phase"] == "connecting":
         _label(p, "VERBINDUNG WIRD AUFGEBAUT ...", Vector2(42, 702), Vector2(530, 30), 16, GOLD)
 
@@ -329,9 +333,13 @@ func _show_lobby() -> void:
     _label(p, "ARMOR COLOR", Vector2(23, 441), Vector2(325, 25), 13, MUTED)
     _dropdown(p, ["NEON CYAN", "ULTRA VIOLET", "SUNSET GOLD", "MALWARE RED"], [0, 1, 2, 3], match_game.my_profile["color_id"], Vector2(23, 469), func(v): _update_profile("color_id", v))
     var loadout: Dictionary = GameRules.CLASSES[str(match_game.my_profile["class_id"])]
-    _label(p, "WEAPON  // " + str(GameRules.WEAPONS[loadout["weapon"]]["label"]), Vector2(23, 535), Vector2(515, 30), 17, GOLD)
-    _label(p, "SKILL  // " + str(loadout["skill"]), Vector2(23, 568), Vector2(515, 27), 16, CYAN)
-    _label(p, "Host synchronisiert Operatoren und Spielregeln.\nBots sind im Solo-Training verfügbar.", Vector2(23, 626), Vector2(515, 65), 14, MUTED)
+    _label(p, "AUSRUESTUNG / WERKZEUG", Vector2(23, 521), Vector2(515, 28), 14, GOLD)
+    var equipment: Array = GameRules.equipment_for_class(str(match_game.my_profile["class_id"]))
+    var equipment_names: Array = []
+    for weapon_id in equipment: equipment_names.append(GameRules.WEAPONS[weapon_id]["label"])
+    _dropdown(p, equipment_names, equipment, match_game.my_profile["weapon"], Vector2(23, 553), func(v): _update_profile("weapon", v))
+    _label(p, "SKILL  // " + str(loadout["skill"]), Vector2(23, 615), Vector2(515, 27), 16, CYAN)
+    _label(p, "Host prueft Ausruestung, Klassen und Aktionen.\\nBots sind im Solo-Training verfuegbar.", Vector2(23, 656), Vector2(515, 45), 14, MUTED)
     var roster := _panel(interface_root, Vector2(609, 112), Vector2(794, 707), PANEL, MAGENTA)
     _label(roster, "02 // MATCH ROSTER", Vector2(24, 20), Vector2(720, 44), 24, MAGENTA)
     _label(roster, "CODENAME        SIDE        FACTION / CLASS", Vector2(25, 77), Vector2(743, 23), 14, MUTED)
