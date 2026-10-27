@@ -14,6 +14,18 @@ func _initialize() -> void:
     ok = _check(not GameRules.has_line_of_sight(Vector2i(1,1),Vector2i(4,1),obstacle),"blocked ray") and ok
     ok = _check(GameRules.has_line_of_sight(Vector2i(1,1),Vector2i(4,1),{}), "open ray") and ok
     ok = _check(GameRules.allowed_weapon("nonsense") == "rifle", "invalid weapon normalized") and ok
+    ok = _check(GameRules.MODES.size() == 3, "all three tactical modes present") and ok
+    ok = _check(GameRules.classes_for_faction("maelstrom").size() == 3, "maelstrom three specialists") and ok
+    ok = _check(GameRules.classes_for_faction("edgerunner").size() == 4, "edgerunner four specialists") and ok
+    ok = _check(GameRules.classes_for_faction("kobantec").size() == 3, "dragon clan three specialists") and ok
+    ok = _check(GameRules.blockers_on_ray(Vector2i(1, 1), Vector2i(4, 1), obstacle) == 1, "one-wall rail shot") and ok
+    for terminal in range(3):
+        var solution := BreachRules.reference_path(terminal)
+        ok = _check(BreachRules.path_is_valid(terminal, solution), "solvable hack node %d" % terminal) and ok
+        var corrupted: Array = solution.duplicate(true)
+        corrupted[1] = [4, 4] if solution[1] != [4, 4] else [0, 4]
+        ok = _check(not BreachRules.path_is_valid(terminal, corrupted), "tampered hack proof rejected %d" % terminal) and ok
+    ok = _check(not BreachRules.path_is_valid(0, []), "empty hack proof rejected") and ok
     print("FutureSoul game-rules smoke tests: ", "PASSED" if ok else "FAILED")
     quit(0 if ok else 1)
 
