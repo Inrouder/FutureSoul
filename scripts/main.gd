@@ -409,7 +409,8 @@ func _show_battle() -> void:
         var item: Array = buttons[i]
         var px := 18 + (i % 2) * 211
         var py := 331 + int(i / 2) * 54
-        var button := _button(side, str(item[0]), Vector2(px, py), Vector2(199, 44), func(): _action_pressed(str(item[1])), item[2], item[1] == action_mode)
+        var action_key := str(item[1])
+        var button := _button(side, str(item[0]), Vector2(px, py), Vector2(199, 44), func(): _action_pressed(action_key), item[2], action_key == action_mode)
         button.disabled = not your_turn
     var end_btn := _button(side, "END TURN  [SPACE]", Vector2(18, 506), Vector2(411, 46), func(): match_game.issue_action("end"), GOLD)
     end_btn.disabled = not your_turn
