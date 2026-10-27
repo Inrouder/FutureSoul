@@ -108,7 +108,7 @@ func _button(parent: Control, label: String, pos: Vector2, dimensions: Vector2, 
     parent.add_child(btn)
     return btn
 
-func _input(parent: Control, current: String, pos: Vector2, dimensions: Vector2) -> LineEdit:
+func _text_input(parent: Control, current: String, pos: Vector2, dimensions: Vector2) -> LineEdit:
     var input := LineEdit.new()
     input.text = current
     input.position = pos
@@ -153,7 +153,7 @@ func _on_updated() -> void:
 
 func _update_world() -> void:
     var state: Dictionary = match_game.state
-    var showing := state["phase"] in ["battle", "victory"]
+    var showing: bool = state["phase"] in ["battle", "victory"]
     arena.visible = true
     for id in actors.keys():
         if not showing or not state["players"].has(id):
@@ -230,7 +230,7 @@ func _show_menu() -> void:
         match_game.start_training(), CYAN, true)
     _label(p, "MULTIPLAYER  /  UDP 7777", Vector2(53, 457), Vector2(700, 26), 14, GOLD)
     _button(p, "HOST ERSTELLEN", Vector2(52, 492), Vector2(385, 57), func(): match_game.start_host(), CYAN)
-    join_ip = _input(p, "127.0.0.1", Vector2(455, 495), Vector2(227, 49))
+    join_ip = _text_input(p, "127.0.0.1", Vector2(455, 495), Vector2(227, 49))
     _button(p, "BEITRETEN", Vector2(691, 492), Vector2(166, 57), func(): match_game.start_join(join_ip.text), GOLD)
     _label(p, "Host und Mitspieler müssen dieselbe Godot-Version verwenden.\nLAN: lokale IP des Hosts. Internet: UDP-Port 7777 freigeben / weiterleiten.", Vector2(55, 578), Vector2(790, 65), 15, MUTED)
     if match_game.state["phase"] == "connecting":
@@ -248,7 +248,7 @@ func _show_lobby() -> void:
     avatar.size = Vector2(139, 143)
     p.add_child(avatar)
     _label(p, "CODENAME", Vector2(24, 79), Vector2(335, 25), 13, MUTED)
-    var name_line := _input(p, match_game.my_profile["name"], Vector2(23, 113), Vector2(320, 44))
+    var name_line := _text_input(p, match_game.my_profile["name"], Vector2(23, 113), Vector2(320, 44))
     name_line.text_submitted.connect(func(value: String): _update_profile("name", value))
     name_line.focus_exited.connect(func(): _update_profile("name", name_line.text))
     _label(p, "FRAKTION", Vector2(23, 232), Vector2(330, 24), 13, MUTED)
@@ -299,7 +299,7 @@ func _show_battle() -> void:
     var mine: Dictionary = state["players"].get(match_game.local_id, {})
     if not mine.is_empty():
         _label(side, "YOU // %s / HP %d" % [mine["name"], int(mine["hp"])], Vector2(18, 292), Vector2(410, 27), 17, CYAN if mine["team"] == "edge" else MAGENTA)
-    var your_turn := state["phase"] == "battle" and active == match_game.local_id and not mine.is_empty() and mine["alive"]
+    var your_turn: bool = state["phase"] == "battle" and active == match_game.local_id and not mine.is_empty() and mine["alive"]
     _label(side, "ACTIONS // %s" % ["YOUR TURN" if your_turn else "WAITING"], Vector2(18, 333), Vector2(410, 28), 17, GOLD)
     var buttons := [
         ["1 / BEWEGEN", "move", CYAN], ["2 / SCHIESSEN", "fire", MAGENTA],
