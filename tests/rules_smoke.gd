@@ -14,6 +14,12 @@ func _initialize() -> void:
     ok = _check(not GameRules.has_line_of_sight(Vector2i(1,1),Vector2i(4,1),obstacle),"blocked ray") and ok
     ok = _check(GameRules.has_line_of_sight(Vector2i(1,1),Vector2i(4,1),{}), "open ray") and ok
     ok = _check(GameRules.allowed_weapon("nonsense") == "rifle", "invalid weapon normalized") and ok
+    for faction in ["maelstrom", "edgerunner", "kobantec"]:
+        for unit_class in GameRules.classes_for_faction(faction):
+            var loadouts: Array = GameRules.equipment_for_class(unit_class)
+            ok = _check(loadouts.size() >= 2, "class equipment options " + unit_class) and ok
+            for weapon_id in loadouts:
+                ok = _check(GameRules.WEAPONS.has(weapon_id), "weapon defined " + weapon_id) and ok
     ok = _check(GameRules.MODES.size() == 3, "all three tactical modes present") and ok
     ok = _check(GameRules.classes_for_faction("maelstrom").size() == 3, "maelstrom three specialists") and ok
     ok = _check(GameRules.classes_for_faction("edgerunner").size() == 4, "edgerunner four specialists") and ok
