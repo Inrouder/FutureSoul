@@ -9,10 +9,12 @@ const MAX_PEERS := 7
 const BLUE_SPAWNS := [Vector2i(3, 14), Vector2i(4, 15), Vector2i(3, 6), Vector2i(6, 16)]
 const RED_SPAWNS := [Vector2i(24, 4), Vector2i(24, 6), Vector2i(23, 14), Vector2i(24, 16)]
 const HOSTAGE_START := Vector2i(22, 9)
+const TERMINALS := {"edge": [Vector2i(4, 4), Vector2i(4, 13), Vector2i(3, 9)], "punk": [Vector2i(23, 6), Vector2i(24, 10), Vector2i(23, 9)]}
+var selected_mode := "kidnap"
 
 var arena: FutureArena
 var state: Dictionary = {}
-var my_profile: Dictionary = {"name": "GHOST_01", "team": "edge", "class_id": "runner", "color_id": 0, "weapon": "rifle"}
+var my_profile: Dictionary = {"name": "GHOST_01", "team": "edge", "faction": "edgerunner", "class_id": "e_runner", "color_id": 0, "weapon": "wire"}
 var local_id := 1
 var rng := RandomNumberGenerator.new()
 var bot_working := false
@@ -27,11 +29,16 @@ func _ready() -> void:
     reset_state()
 
 func reset_state() -> void:
-    state = {"phase": "menu", "players": {}, "turn_order": [], "turn_index": 0, "active": 0, "round": 1, "hostage": HOSTAGE_START, "carrier": 0, "winner": "", "event": {}, "log": ["SYSTEM // Link initialized"], "training": false}
+    state = {"phase": "menu", "players": {}, "turn_order": [], "turn_index": 0, "active": 0, "round": 1, "hostage": HOSTAGE_START, "carrier": 0, "winner": "", "event": {}, "log": ["SYSTEM // Link initialized"], "training": false, "mode": selected_mode, "hacked": {"edge": [], "punk": []}}
     updated.emit()
 
 func _default_player(id: int, incoming: Dictionary, team: String) -> Dictionary:
-    return {"id": id, "name": str(incoming.get("name", "GHOST")).substr(0, 15), "team": team, "class_id": GameRules.allowed_class(str(incoming.get("class_id", "runner"))), "color_id": clampi(int(incoming.get("color_id", 0)), 0, 3), "weapon": GameRules.allowed_weapon(str(incoming.get("weapon", "rifle"))), "hp": 100, "ap": 0, "pos": Vector2i.ZERO, "alive": true, "overwatch": false, "bot": false}
+    var faction := GameRules.valid_faction(str(incoming.get("faction", "edgerunner" if team == "edge" else "maelstrom")))
+    if selected_mode == "kidnap" and team == "punk": faction = "maelstrom"
+    if selected_mode == "kidnap" and team == "edge" and faction == "maelstrom": faction = "edgerunner"
+    var class_id := GameRules.allowed_class(str(incoming.get("class_id", "e_runner")))
+    if not class_id in GameRules.classes_for_faction(faction): class_id = str(GameRules.classes_for_faction(faction)[0])
+    return {"id": id, "name": str(incoming.get("name", "GHOST")).substr(0, 15), "team": team, "faction": faction, "class_id": class_id, "color_id": clampi(int(incoming.get("color_id", 0)), 0, 3), "weapon": str(GameRules.CLASSES[class_id]["weapon"]), "hp": 100, "ap": 0, "pos": Vector2i.ZERO, "alive": true, "overwatch": false, "bot": false, "cooldown": 0, "stealth": 0, "shield": 0, "jam": 0, "speed_boost": 0}
 
 func start_host() -> void:
     _disconnect_peer()
@@ -72,7 +79,7 @@ func start_training() -> void:
     state["players"][1] = _default_player(1, my_profile, "edge")
     for index in range(2):
         var id := -10 - index
-        var bot := _default_player(id, {"name": "MAELSTROM_%02d" % (index+1), "class_id": "heavy" if index == 0 else "runner", "weapon": "smg", "color_id": 3}, "punk")
+        var bot := _default_player(id, {"name": "MAELSTROM_%02d" % (index+1), "faction": "maelstrom", "class_id": "m_gunner" if index == 0 else "m_shooty", "color_id": 3}, "punk")
         bot["bot"] = true
         state["players"][id] = bot
     _begin_battle()
@@ -151,9 +158,14 @@ func _set_profile(id: int, data: Dictionary) -> void:
     p["name"] = str(data.get("name", p["name"])).strip_edges().substr(0, 15)
     if p["name"].is_empty(): p["name"] = "GHOST"
     p["team"] = "punk" if str(data.get("team", p["team"])) == "punk" else "edge"
+    p["faction"] = GameRules.valid_faction(str(data.get("faction", p["faction"])))
+    if selected_mode == "kidnap" and p["team"] == "punk": p["faction"] = "maelstrom"
+    if selected_mode == "kidnap" and p["team"] == "edge" and p["faction"] == "maelstrom": p["faction"] = "edgerunner"
     p["class_id"] = GameRules.allowed_class(str(data.get("class_id", p["class_id"])))
+    if not p["class_id"] in GameRules.classes_for_faction(p["faction"]):
+        p["class_id"] = str(GameRules.classes_for_faction(p["faction"])[0])
     p["color_id"] = clampi(int(data.get("color_id", p["color_id"])), 0, 3)
-    p["weapon"] = GameRules.allowed_weapon(str(data.get("weapon", p["weapon"])))
+    p["weapon"] = str(GameRules.CLASSES[p["class_id"]]["weapon"])
     state["players"][id] = p
     _publish()
 
@@ -191,7 +203,7 @@ func _begin_battle() -> void:
             p["pos"] = RED_SPAWNS[red_index]
             red_index += 1
         state["players"][id] = p
-    # Alternating factions reduces first-turn advantage in team matches.
+    # Alternating sides reduces first-turn advantage in team matches.
     var blue_ids: Array = []
     var red_ids: Array = []
     for id in ids:
@@ -205,13 +217,14 @@ func _begin_battle() -> void:
     state["winner"] = ""
     state["carrier"] = 0
     state["hostage"] = HOSTAGE_START
+    state["hacked"] = {"edge": [], "punk": []}
     state["turn_order"] = order
     state["turn_index"] = 0
     state["active"] = order[0]
     var starter: Dictionary = state["players"][order[0]]
     starter["ap"] = GameRules.AP_PER_TURN
     state["players"][order[0]] = starter
-    _log("OPERATION STARTED // Rescue the hostage")
+    _log("OPERATION STARTED // %s" % GameRules.MODES[str(state["mode"])])
     _publish()
     _schedule_bot_if_needed()
 
