@@ -15,6 +15,12 @@ var selection: Vector2i = Vector2i(-1, -1)
 var actor_node: Node2D
 var textures: Dictionary = {}
 var flicker := 0.0
+var mode := "kidnap"
+var hacked: Dictionary = {"edge": [], "punk": []}
+const TERMINALS := {
+    "edge": [Vector2i(4, 4), Vector2i(4, 13), Vector2i(3, 9)],
+    "punk": [Vector2i(23, 6), Vector2i(24, 10), Vector2i(23, 9)],
+}
 
 func _ready() -> void:
     texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
@@ -116,6 +122,8 @@ func _draw() -> void:
         for x in range(W):
             var c := Vector2i(x, y)
             var kind: String = tile_at(c)
+            if kind == "extract" and mode != "kidnap":
+                kind = "floor"
             var pos := Vector2(x * TILE, y * TILE)
             if kind == "floor":
                 kind = "floor_" + str((x * 19 + y * 37 + x * y * 3) % 5)
@@ -128,9 +136,31 @@ func _draw() -> void:
         var pulse := 0.83 + sin(flicker * 1.8 + glow_cell.x) * 0.17
         for radius in [70.0, 45.0, 25.0]:
             draw_circle(p, radius, Color(0.1, 0.91, 0.81, 0.008 * pulse * (80.0 / radius)))
-    for x in range(2, 5):
-        for y in range(8, 12):
-            draw_rect(Rect2(Vector2(x * TILE, y * TILE), Vector2(TILE, TILE)), Color(0.2, 1.0, 0.76, 0.04 + 0.05 * sin(flicker * 3.0)), true)
+    if mode == "kidnap":
+        for x in range(2, 5):
+            for y in range(8, 12):
+                draw_rect(Rect2(Vector2(x * TILE, y * TILE), Vector2(TILE, TILE)), Color(0.2, 1.0, 0.76, 0.04 + 0.05 * sin(flicker * 3.0)), true)
+    elif mode == "skirmish":
+        draw_rect(Rect2(42, 66, 166, 468), Color("43d9e4", 0.08))
+        draw_rect(Rect2(700, 66, 151, 468), Color("ff4973", 0.08))
+        draw_rect(Rect2(42, 66, 166, 468), Color("43d9e4", 0.25), false, 2)
+        draw_rect(Rect2(700, 66, 151, 468), Color("ff4973", 0.25), false, 2)
+    elif mode == "hack":
+        for side in TERMINALS:
+            var tint := Color("40e8ed") if side == "edge" else Color("ff466d")
+            for index in range(TERMINALS[side].size()):
+                var terminal_cell: Vector2i = TERMINALS[side][index]
+                var cpos := cell_center(terminal_cell)
+                var done: bool = hacked.get("punk" if side == "edge" else "edge", []).has(index)
+                var pulse := 0.75 + 0.25 * sin(flicker * 4 + index)
+                var col := Color("53706e") if done else tint
+                draw_rect(Rect2(cpos - Vector2(18, 18), Vector2(36, 36)), col * pulse, false, 2)
+                draw_rect(Rect2(cpos - Vector2(12, 12), Vector2(24, 24)), Color("071318"))
+                draw_rect(Rect2(cpos - Vector2(6, 5), Vector2(12, 10)), col, false, 2)
+                draw_line(cpos + Vector2(-5, 12), cpos + Vector2(5, 12), col, 2)
+                if index == 2:
+                    draw_circle(cpos, 21.0, Color(col, 0.12))
+                draw_string(ThemeDB.fallback_font, cpos + Vector2(-9, -21), "CORE" if index == 2 else "0%d" % (index + 1), HORIZONTAL_ALIGNMENT_LEFT, -1, 10, col)
     # subtle digital night-time atmosphere
     draw_rect(Rect2(0, 0, W * TILE, H * TILE), Color(0.025, 0.04, 0.11, 0.12))
     if GameRules.in_bounds(selection):
