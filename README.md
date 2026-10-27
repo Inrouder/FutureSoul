@@ -1,33 +1,30 @@
-# FUTURESOUL — Cyberpunk Tactical Warfare
+# FUTURESOUL — Realtime Cyberpunk Shooter
 
-A Godot 4 top-down, turn-based cyberpunk tactical shooter **early vertical slice**.
+Godot 4 realtime top-down action shooter. **The active main scene runs scripts/realtime.gd.** Previous scripts/game.gd is preserved as an archived turn-based experiment, not active gameplay.
 
-## Install & launch
-1. Download/clone this repository.
-2. Install Godot 4.3+ and import `project.godot`.
-3. Press **F6/F5 / Run Project**. No third-party assets needed.
+## Play
+1. Install Godot 4.3+ and import project.godot.
+2. Run the game (F5).
+3. Choose a mission, faction, class and armor tint; click DEPLOY / PLAY OFFLINE.
 
-## Included
-- **3 factions / 10 classes**: Maelstrom (Gunner, Punk Bruiser, Shooty), Edgerunners (The Big, Snipeout, Cyberpsycho, Netrunner) and Kobantec / Dragon Clan (First Warrior, Rocky, Raven).
-- **3 rule sets**: Maelstrom Kidnap (hostage extraction), Faction War (team elimination) and Hack the Base (two terminals, then mainframe).
-- AP turns, tactical movement and cover blockers, basic ranged damage and per-class special actions.
-- Alternating code-matrix hacking minigame, unique faction-colored procedural sprites, HUD, character color/class picker, industrial neon arena.
-- Basic offline bot turns and **experimental** ENet LAN host/join on UDP port 7777.
+## Live controls
+- WASD — move freely in real time.
+- Mouse — aim; left click / hold — fire continuously.
+- Space / right click — unique class skill with cooldown.
+- E — interact with hostage/data terminals.
+- Escape — return to menu. R — replay after match end.
 
-## Controls
-- In menu select operation, faction, operative and suit color; then choose Solo / Host LAN / Join LAN.
-- Left mouse: select friendly operative, move to floor tile, shoot target or interact with point of interest.
-- 1 = Move; 2 = Shoot; 3 = Ability; 4 = Interact; Tab = next teammate; Space = end turn.
-- Hack by selecting highlighted goal codes in alternating column and row order (first move is on top row).
-- Esc = leave minigame / return to HQ.
-- To join a game, edit the IP address at the bottom of the main menu; default 127.0.0.1.
+## Modes (offline vertical slice)
+- **Maelstrom Kidnap** — locate and rescue hostage, escort to turquoise extraction.
+- **Faction War** — defeat six opposing fighters to clear their base.
+- **Hack the Base** — interact with both DATA terminals before interacting with CORE.
 
-## Current limitations (read before use)
-This is NOT a finished, tested multiplayer release. Godot was unavailable in the authoring environment; importing, gameplay testing, and live two-machine multiplayer tests are **still required**. This code has been source-reviewed, but no successful engine run is claimed. LAN sync is experimental; remote team selection and the hacking RPC flow require integration hardening. Internet play requires UDP port forwarding/firewall configuration. No account system, matchmaking, server anti-cheat, replay, or save/load.
+Ten classes across Maelstrom, Edgerunners and Kobantec. NPC enemies move, aim, fire and chase in real time; two friendly combat bots support the player. Animated projectile tracers and spark particles, illustrated multi-part top-down soldiers, shadows, neon signage, cover crates and weathered industrial floor details.
 
-**Graphics are intentionally self-drawn, procedurally stylized starter artwork, not professional finished pixel-art sprites.** The reference game's protected assets are not included. The level editor, hand-authored tiles, sound, animation atlas, portal wall traversal, full hostage-following AI, and sophisticated cover/pathfinding are planned and not yet implemented.
+## Honest limitations
+The game is **an unverified realtime proof-of-concept**, not finished production-quality pixel art. A Godot executable is not installed in the current authoring environment so engine import/play testing could not be performed. Report the first Godot parser error with its line number if you encounter one. Networking/PvP is not yet implemented in the new realtime scene (old prototype includes experimental LAN scaffolding but is not active). Class skills are simplified; the hacking puzzle, Raven wall portals, robust multiplayer lobby, 2D tile asset pack, detailed animated sprites and level editor still require implementation. Placeholder industrial visuals should be replaced with an original pixel-art atlas to achieve the high-fidelity reference look.
 
-## Architecture
-`project.godot` entry point → `main.tscn` → `scripts/game.gd`.
+The attached art references are stylistic inspiration, not reusable game assets.
 
-Roadmap is documented in [docs/ROADMAP.md](docs/ROADMAP.md).
+## Roadmap
+See docs/ROADMAP.md.
