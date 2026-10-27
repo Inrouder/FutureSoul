@@ -53,13 +53,13 @@ static func has_line_of_sight(start: Vector2i, goal: Vector2i, obstacles: Dictio
     # Bresenham grid ray. Blocking tiles between shooter and target hide the target.
     var x := start.x
     var y := start.y
-    var dx := abs(goal.x - x)
-    var dy := abs(goal.y - y)
+    var dx: int = absi(goal.x - x)
+    var dy: int = absi(goal.y - y)
     var sx := 1 if x < goal.x else -1
     var sy := 1 if y < goal.y else -1
-    var error := dx - dy
+    var error: int = dx - dy
     while x != goal.x or y != goal.y:
-        var double_error := 2 * error
+        var double_error: int = 2 * error
         if double_error > -dy:
             error -= dy
             x += sx
