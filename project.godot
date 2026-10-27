@@ -1,0 +1,23 @@
+config_version=5
+
+[application]
+config/name="FutureSoul"
+run/main_scene="res://scenes/main.tscn"
+config/description="Turn-based top-down cyberpunk tactical PvP shooter"
+
+[display]
+window/size/viewport_width=1440
+window/size/viewport_height=900
+window/size/window_width_override=1440
+window/size/window_height_override=900
+window/stretch/mode="canvas_items"
+
+[rendering]
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
+textures/default_filters/use_nearest_mipmap_filter=false
+textures/default_filters/use_nearest_filter=true
+environment/defaults/default_clear_color=Color(0.0431373, 0.0627451, 0.113725, 1)
+
+[physics]
+2d/default_gravity=0.0

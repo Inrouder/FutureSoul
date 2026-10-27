@@ -1,0 +1,30 @@
+name: Godot project validation
+on:
+  push:
+    paths:
+      - 'scripts/**'
+      - 'scenes/**'
+      - 'tests/**'
+      - 'project.godot'
+      - 'assets/**'
+      - '.github/workflows/godot-ci.yml'
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  lint-and-rules:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Godot 4.4.1
+        run: |
+          curl -fL --retry 3 https://github.com/godotengine/godot/releases/download/4.4.1-stable/Godot_v4.4.1-stable_linux.x86_64.zip -o /tmp/godot.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.4.1-stable_linux.x86_64
+          echo /tmp >> "$GITHUB_PATH"
+          ln -s /tmp/Godot_v4.4.1-stable_linux.x86_64 /tmp/godot
+      - name: Godot import and static script parsing
+        run: godot --headless --path . --editor --quit
+      - name: Pure game-rule smoke tests
+        run: godot --headless --path . --script res://tests/rules_smoke.gd
