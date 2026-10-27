@@ -246,6 +246,11 @@ func _server_command(sender: int, action: String, cell: Vector2i) -> void:
     var unit: Dictionary = state["players"][sender]
     if not unit["alive"]: return
     var ap: int = unit["ap"]
+    if action.begins_with("breach|"):
+        _resolve_breach(sender, cell, action.substr(7))
+        _check_victory()
+        _publish()
+        return
     match action:
         "move":
             if ap < 1 or arena.is_blocked(cell): return
@@ -254,12 +259,12 @@ func _server_command(sender: int, action: String, cell: Vector2i) -> void:
                 var other: Dictionary = state["players"][id]
                 if id != sender and other["alive"]: blocked[other["pos"]] = true
             var distance := GameRules.walk_distance(unit["pos"], cell, blocked)
-            if distance <= 0 or distance > int(GameRules.class_for_unit(unit)["movement"]): return
+            if distance <= 0 or distance > int(GameRules.class_for_unit(unit)["movement"]) + int(unit.get("speed_boost", 0)): return
             var old_position: Vector2i = unit["pos"]
             unit["pos"] = cell
             unit["ap"] = ap - 1
             state["players"][sender] = unit
-            if int(state["carrier"]) == sender:
+            if state["mode"] == "kidnap" and int(state["carrier"]) == sender:
                 state["hostage"] = old_position
                 if arena.is_extract(cell):
                     state["winner"] = "edge"
@@ -269,13 +274,21 @@ func _server_command(sender: int, action: String, cell: Vector2i) -> void:
             _log("%s // Relocated" % unit["name"])
             if state["phase"] == "battle": _trigger_overwatch(sender)
         "fire":
-            if ap < 2: return
+            if ap < 2 or int(unit.get("jam", 0)) > 0: return
             var target_id := _enemy_at(sender, cell)
             if target_id == 0: return
             if not _can_shoot(unit, cell): return
             unit["ap"] = ap - 2
             state["players"][sender] = unit
             _resolve_shot(sender, target_id, false)
+            if int(unit.get("stealth", 0)) > 0:
+                var exposed: Dictionary = state["players"][sender]
+                exposed["stealth"] = 0
+                state["players"][sender] = exposed
+        "skill":
+            if not _use_skill(sender, cell): return
+        "portal":
+            if not _use_portal(sender, cell): return
         "overwatch":
             if ap < 1 or unit["overwatch"]: return
             unit["ap"] = ap - 1
@@ -284,7 +297,7 @@ func _server_command(sender: int, action: String, cell: Vector2i) -> void:
             _log("%s // OVERWATCH ARMED" % unit["name"])
             state["event"] = {"type": "guard", "actor": sender}
         "interact":
-            if ap < 1 or unit["team"] != "edge" or int(state["carrier"]) != 0: return
+            if state["mode"] != "kidnap" or ap < 1 or unit["team"] != "edge" or int(state["carrier"]) != 0: return
             if GameRules.range_between(unit["pos"], state["hostage"]) > 1: return
             unit["ap"] = ap - 1
             state["players"][sender] = unit
@@ -306,15 +319,22 @@ func _enemy_at(shooter_id: int, cell: Vector2i) -> int:
     return 0
 
 func _can_shoot(unit: Dictionary, cell: Vector2i) -> bool:
-    return GameRules.range_between(unit["pos"], cell) <= int(GameRules.weapon_for_unit(unit)["range"]) and GameRules.has_line_of_sight(unit["pos"], cell, arena.blockers)
+    if GameRules.range_between(unit["pos"], cell) > int(GameRules.weapon_for_unit(unit)["range"]):
+        return false
+    if unit["class_id"] == "e_sniper":
+        return GameRules.blockers_on_ray(unit["pos"], cell, arena.blockers) <= 1
+    return GameRules.has_line_of_sight(unit["pos"], cell, arena.blockers)
 
 func _resolve_shot(shooter_id: int, target_id: int, reaction: bool) -> void:
     var shooter: Dictionary = state["players"][shooter_id]
     var target: Dictionary = state["players"][target_id]
     var weapon: Dictionary = GameRules.weapon_for_unit(shooter)
-    var hit_chance: int = int(weapon["accuracy"]) - (18 if _has_cover(target["pos"]) else 0) - (16 if reaction else 0)
+    var hit_chance: int = int(weapon["accuracy"]) - (18 if _has_cover(target["pos"]) else 0) - (16 if reaction else 0) - (55 if int(target.get("stealth", 0)) > 0 else 0)
     var hit := rng.randi_range(1, 100) <= hit_chance
     var damage: int = int(weapon["damage"]) / 2 if reaction else int(weapon["damage"])
+    if shooter["class_id"] == "m_gunner": damage += 8
+    if shooter["class_id"] == "m_shooty": damage += 5
+    damage = maxi(1, damage - (18 if int(target.get("shield", 0)) > 0 else 0))
     if hit:
         target["hp"] = maxi(0, int(target["hp"]) - damage)
         if target["hp"] == 0:
@@ -363,6 +383,8 @@ func _advance_turn() -> void:
         var next_unit: Dictionary = state["players"].get(next_id, {})
         if next_unit.is_empty() or not next_unit.get("alive", false): continue
         next_unit["ap"] = GameRules.AP_PER_TURN
+        for effect in ["cooldown", "jam", "stealth", "shield", "speed_boost"]:
+            next_unit[effect] = maxi(0, int(next_unit.get(effect, 0)) - 1)
         next_unit["overwatch"] = false
         state["players"][next_id] = next_unit
         state["active"] = next_id
@@ -380,14 +402,26 @@ func _check_victory() -> void:
         if p["alive"]:
             if p["team"] == "edge": edge_alive += 1
             else: punk_alive += 1
-    if edge_alive == 0 or int(state["round"]) > GameRules.MAX_ROUNDS:
-        state["winner"] = "punk"
+    if edge_alive == 0 or punk_alive == 0:
+        state["winner"] = "punk" if edge_alive == 0 else "edge"
         state["phase"] = "victory"
-        _log("CONTRACT FAILED // MAELSTROM WIN")
-    elif punk_alive == 0:
-        state["winner"] = "edge"
+        _log("SQUAD ELIMINATED // %s WINS" % str(state["winner"]).to_upper())
+    elif int(state["round"]) > GameRules.MAX_ROUNDS:
+        if state["mode"] == "kidnap":
+            state["winner"] = "punk"
+        elif state["mode"] == "hack":
+            var blue: int = state["hacked"]["edge"].size()
+            var red: int = state["hacked"]["punk"].size()
+            state["winner"] = "edge" if blue > red else ("punk" if red > blue else "draw")
+        else:
+            var blue_hp := 0
+            var red_hp := 0
+            for u in state["players"].values():
+                if u["team"] == "edge": blue_hp += int(u["hp"])
+                else: red_hp += int(u["hp"])
+            state["winner"] = "edge" if blue_hp > red_hp else ("punk" if red_hp > blue_hp else "draw")
         state["phase"] = "victory"
-        _log("BASE SECURED // EDGERUNNERS WIN")
+        _log("ROUND LIMIT REACHED // %s" % str(state["winner"]).to_upper())
 
 func _log(line: String) -> void:
     state["log"].push_front(line)
